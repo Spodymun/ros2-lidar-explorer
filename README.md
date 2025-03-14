@@ -76,8 +76,9 @@ python3 esp_http_control.py
 rviz2
 ```
 In Rviz you'll have to add laser_scan, map, robot and tf.
-   - laser_scan topic /scan
-   - map -> add slam_toolbox map -> topic /map
-   - robot -> go to ... and load ...
+   - By display type laser_scan - by topic /scan
+   - By display type map - by topic /map
+   - By display type RobotModel
+     - Description Topic /robot_description
 
 Set your fixed frames to odom until the map is loaded, then set it to map and start exploring.
