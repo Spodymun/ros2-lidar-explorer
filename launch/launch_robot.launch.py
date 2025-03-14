@@ -19,7 +19,7 @@ def generate_launch_description():
     # Include the robot_state_publisher launch file, provided by our own package. Force sim time to be enabled
     # !!! MAKE SURE YOU SET THE PACKAGE NAME CORRECTLY !!!
 
-    package_name='articubot_one' #<--- CHANGE ME
+    package_name='ros2-lidar-explorer' #<--- CHANGE ME
 
     rsp = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
@@ -67,7 +67,7 @@ def generate_launch_description():
     )
 
     esp_http_control_node = Node(
-        package="articubot_one",
+        package="ros2-lidar-explorer",
         executable="esp_http_control",
         name="esp_http_control_node",
         output="screen",

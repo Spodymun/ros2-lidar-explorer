@@ -67,11 +67,11 @@ sudo apt update && sudo apt install -y \
 Once everything is set up, follow these steps to launch mapping.  
 
 ```bash
-ros2 launch articubot_one launch_robot.launch.py
-ros2 launch articubot_one rplidar.launch.py
+ros2 launch ros2-lidar-explorer launch_robot.launch.py
+ros2 launch ros2-lidar-explorer rplidar.launch.py
 ros2 launch slam_toolbox online_async_launch.py
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
-cd ~/ws_lidar/src/articubot_one/python
+cd ~/ws_lidar/src/ros2-lidar-explorer/python
 python3 esp_http_control.py 
 rviz2
 ```
