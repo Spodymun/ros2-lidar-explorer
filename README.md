@@ -67,13 +67,8 @@ sudo apt update && sudo apt install -y \
 Once everything is set up, follow these steps to launch mapping.  
 
 ```bash
-ros2 launch ros2-lidar-explorer launch_robot.launch.py
-ros2 launch ros2-lidar-explorer rplidar.launch.py
-ros2 launch slam_toolbox online_async_launch.py
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 esp_http_control.py 
-rviz2
+cd ~/ws_lidar/src/ros2-lidar-explorer
+./startup.sh IP_ADRESS_OF_YOUR_ESP
 ```
 In Rviz you'll have to add laser_scan, map, robot and tf.
    - By display type laser_scan - by topic /scan
