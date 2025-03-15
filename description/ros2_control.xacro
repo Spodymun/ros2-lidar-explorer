@@ -5,7 +5,7 @@
         <ros2_control name="RealRobot" type="system">
             <hardware>
                 <plugin>mock_components/GenericSystem</plugin>
-                <param name="esp_ip">http://192.168.137.186</param> <!-- ESP IP-Adresse -->
+                <param name="esp_ip">http://192.168.137.249</param> <!-- ESP IP-Adresse -->
                 <param name="baud_rate">115200</param> <!-- Angepasste Baudrate -->
                 <param name="timeout">1000</param>
             </hardware>

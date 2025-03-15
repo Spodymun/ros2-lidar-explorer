@@ -10,7 +10,7 @@ from urllib.parse import quote  # URL-Codierung
 from collections import deque  # Für gleitenden Durchschnitt
 
 # Beispiel-URL deines ESP
-ESP_IP = "http://192.168.137.200"  # IP-Adresse des ESP
+ESP_IP = "http://192.168.137.249"  # IP-Adresse des ESP
 
 class ESPHttpControl(Node):
     def __init__(self):
@@ -53,8 +53,8 @@ class ESPHttpControl(Node):
 
     def cmd_vel_callback(self, msg):
         """Callback, um Befehle zu verarbeiten und Geschwindigkeiten zu setzen."""
-        self.linear_x = msg.linear.x
-        self.angular_z = msg.angular.z
+        self.linear_x = msg.linear.x * 5
+        self.angular_z = msg.angular.z * 5
         self.last_command_time = self.get_clock().now()  # Zeitstempel aktualisieren
 
     def update_odom(self):
@@ -65,14 +65,14 @@ class ESPHttpControl(Node):
             return
 
         # Wenn keine neuen Befehle kommen, Geschwindigkeit langsam reduzieren
-        time_since_last_cmd = (current_time - self.last_command_time).nanoseconds / 1e9
-        if time_since_last_cmd > self.cmd_timeout:
-            self.linear_x *= 0.95  # Exponentielles Abbremsen
-            self.angular_z *= 0.95
-            if abs(self.linear_x) < 0.01:
-                self.linear_x = 0.0
-            if abs(self.angular_z) < 0.01:
-                self.angular_z = 0.0
+        #time_since_last_cmd = (current_time - self.last_command_time).nanoseconds / 1e9
+        #if time_since_last_cmd > self.cmd_timeout:
+        #    self.linear_x *= 0.95  # Exponentielles Abbremsen
+        #    self.angular_z *= 0.95
+        #    if abs(self.linear_x) < 0.01:
+        #        self.linear_x = 0.0
+        #    if abs(self.angular_z) < 0.01:
+        #        self.angular_z = 0.0
 
         # Berechnung der neuen Position des `base_link`
         new_x = self.x + self.linear_x * cos(self.theta) * dt
@@ -116,17 +116,21 @@ class ESPHttpControl(Node):
         right_wheel_rotation = self.linear_x * dt / self.wheel_radius
 
         # Nur alle 100 ms an ESP senden
-        if (current_time - self.last_command_time).nanoseconds / 1e9 >= 0.1:
+        if (current_time - self.last_command_time).nanoseconds / 1e9 >= 0.2:
             self.send_motor_command(self.linear_x, self.angular_z)
             self.last_command_time = current_time
 
     def send_motor_command(self, linear_x, angular_z):
         """Sendet Befehle an das ESP-Modul zur Steuerung des Motors."""
-        scaling_factor = 0.1
-        linear_x_scaled = linear_x * scaling_factor
-        angular_z_scaled = angular_z * scaling_factor
+        scaling_factor_circel = 0.0627
+        scaling_factor_straight = 0.09
+        linear_x_scaled = linear_x * scaling_factor_straight
+        angular_z_scaled = angular_z * scaling_factor_circel
 
-        command = {"T": 1, "L": linear_x_scaled, "R": angular_z_scaled}
+        left_motor_speed = linear_x_scaled - angular_z_scaled
+        right_motor_speed = linear_x_scaled + angular_z_scaled
+
+        command = {"T": 1, "L": left_motor_speed, "R": right_motor_speed}
         json_command = json.dumps(command)
         encoded_command = quote(json_command)
         url = f"{ESP_IP}/js?json={encoded_command}"
@@ -138,22 +142,6 @@ class ESPHttpControl(Node):
                 self.get_logger().warn(f"Failed to send command to ESP, status code: {response.status_code}")
         except requests.exceptions.RequestException as e:
             self.get_logger().error(f"Error communicating with ESP: {e}")
-
-    def move_robot(self, direction: str):
-        """Steuert den Roboter basierend auf der Richtung."""
-        if direction == "Turn left":
-            self.linear_x = -0.1
-            self.angular_z = 0.1
-        elif direction == "Turn right":
-            self.linear_x = 0.1
-            self.angular_z = -0.1
-        elif direction == "Go straight ahead":
-            self.linear_x = 0.2
-            self.angular_z = 0.0
-        elif direction == "Stop":
-            self.linear_x = 0.0
-            self.angular_z = 0.0
-        self.send_motor_command(self.linear_x, self.angular_z)
 
 
 def main():
