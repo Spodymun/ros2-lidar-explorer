@@ -3,11 +3,13 @@
 
     <xacro:arg name="use_ros2_control" default="true"/>
     <xacro:arg name="sim_mode" default="false"/>
+    <xacro:arg name="esp_ip" default="192.168.1.100"/>
 
     <xacro:include filename="robot_core.xacro" />
 
     <xacro:if value="$(arg use_ros2_control)">
         <xacro:include filename="ros2_control.xacro" />
+        <xacro:ros2_control_config esp_ip="$(arg esp_ip)" />
     </xacro:if>
     <xacro:unless value="$(arg use_ros2_control)">
         <xacro:include filename="gazebo_control.xacro" />

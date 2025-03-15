@@ -7,9 +7,10 @@ import json
 import requests
 from math import cos, sin
 from urllib.parse import quote
+import sys
 
 # ESP32 URL
-ESP_IP = "192.168.137.249"
+ESP_IP = sys.argv[1]
 
 class ESPHttpControl(Node):
     def __init__(self):

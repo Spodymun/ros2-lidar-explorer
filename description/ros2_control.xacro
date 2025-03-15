@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:unless value="$(arg sim_mode)">
+    <xacro:arg name="esp_ip" default="192.168.1.100"/>
+
+    <xacro:macro name="ros2_control_config" params="esp_ip">
         <ros2_control name="RealRobot" type="system">
             <hardware>
                 <plugin>mock_components/GenericSystem</plugin>
-                <param name="esp_ip">http://192.168.137.249</param> <!-- ESP IP-Adresse -->
+                <param name="esp_ip">http://$(arg esp_ip)</param> <!-- ESP IP-Adresse -->
                 <param name="baud_rate">115200</param> <!-- Angepasste Baudrate -->
                 <param name="timeout">1000</param>
             </hardware>
@@ -26,6 +28,6 @@
                 <state_interface name="position"/>
             </joint>
         </ros2_control>
-    </xacro:unless>
+    </xacro:macro>
 
 </robot>
