@@ -34,9 +34,4 @@
         </visual>
     </link>
 
-    <gazebo reference="face_link">
-        <material>Gazebo/Black</material>
-    </gazebo>
-
-
 </robot>
