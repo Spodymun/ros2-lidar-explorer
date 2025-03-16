@@ -49,17 +49,26 @@ You'll need to set up a hotspot using a laptop, mobile phone, or another compati
 Once connected, you can find the IP address of your ESP.
 
 #### 📦 Essential Packages  
-Some dependencies from **@Articulated Robotics' videos** are required.  
-Please check the videos for details. 
-(I'll hopefully update the list in the future) 
+Please check **@Articulated Robotics' videos** videos for details. 
 
-Run the following command to install the necessary ROS 2 packages:  
+Run the following command to install the necessary ROS 2 packages:
+
 ```bash
 sudo apt update && sudo apt install -y \
     ros-jazzy-rviz2 \
     ros-jazzy-slam-toolbox \
     ros-jazzy-teleop-twist-keyboard \
-    ros-jazzy-nav2-bringup 
+    ros-jazzy-nav2-bringup \
+    ros-jazzy-rclpy \
+    ros-jazzy-geometry-msgs \
+    ros-jazzy-nav-msgs \
+    ros-jazzy-tf2-ros \
+    ros-jazzy-launch \
+    ros-jazzy-launch-ros \
+    ros-jazzy-ament-index-python \
+    ros-jazzy-xacro    
+
+sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
 
 #### ▶️ Running the Project  
