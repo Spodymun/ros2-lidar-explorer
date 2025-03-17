@@ -8,9 +8,9 @@ import requests
 from math import cos, sin
 from urllib.parse import quote  # URL-Codierung
 from collections import deque  # Für gleitenden Durchschnitt
+import sys
 
-# Beispiel-URL deines ESP
-ESP_IP = "http://192.168.137.249"  # IP-Adresse des ESP
+ESP_IP = sys.argv[1]
 
 class ESPHttpControl(Node):
     def __init__(self):
@@ -133,7 +133,7 @@ class ESPHttpControl(Node):
         command = {"T": 1, "L": left_motor_speed, "R": right_motor_speed}
         json_command = json.dumps(command)
         encoded_command = quote(json_command)
-        url = f"{ESP_IP}/js?json={encoded_command}"
+        url = f"http://{ESP_IP}/js?json={encoded_command}"
         try:
             response = requests.get(url, timeout=0.5)
             if response.status_code == 200:

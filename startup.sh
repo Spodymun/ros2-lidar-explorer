@@ -47,7 +47,7 @@ echo "Prozess 4 (teleop_twist_keyboard) in einem neuen Terminal gestartet, PID: 
 
 # 5. Starten des ESP Control Scripts mit der übergebenen IP
 cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 esp_http_control.py "$ESP_IP" &
+python3 esp_http_control_test.py "$ESP_IP" &
 bg_pid5=$!
 echo "Prozess 5 (esp_http_control.py) mit IP $ESP_IP im Hintergrund gestartet, PID: $bg_pid5"
 
