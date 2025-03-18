@@ -5,17 +5,21 @@ from nav_msgs.msg import Odometry
 from tf2_ros import TransformBroadcaster, TransformStamped
 import json
 import requests
-from math import cos, sin
-from urllib.parse import quote  # URL-Codierung
-from collections import deque  # Für gleitenden Durchschnitt
+from math import cos, sin, pi
+from urllib.parse import quote
+from collections import deque
 import sys
+import numpy as np
+import threading
+import time  
 
 ESP_IP = sys.argv[1]
 
 class ESPHttpControl(Node):
     def __init__(self):
         super().__init__('esp_http_control')
-        
+        self.session = requests.Session()
+
         self.velocity_topic = "/cmd_vel"
         self.vel_subscriber = self.create_subscription(
             Twist,
@@ -23,109 +27,95 @@ class ESPHttpControl(Node):
             self.cmd_vel_callback,
             10
         )
-        
+
         self.odom_publisher = self.create_publisher(Odometry, '/odom', 10)
         self.tf_broadcaster = TransformBroadcaster(self)
-        
-        # Anfangswerte für die Position und Orientierung
+
+        self.wheel_offset_x = 0.207     #Do not take the real measurements, just play around until the odom matches the reallife movement
+        self.wheel_radius = 0.038       #Do not take the real measurements, just play around until the odom matches the reallife movement
+        self.TICKS_PER_REV_LEFT = 24    #Calibrate before driving (Should drive 1 Meter)
+        self.TICKS_PER_REV_RIGHT = 25   #Calibrate before driving (Should drive 1 Meter)
+
+        self.position_history = deque(maxlen=5)
+        self.last_command_time = self.get_clock().now()
+        self.cmd_timeout = 0.5
+
+        # **Neu: Timer für Encoder-Updates auf 100 ms**
+        self.create_timer(0.1, self.update_odom)
+
+        # **Neu: Speichert den letzten gesendeten Befehl, um doppelte Anfragen zu vermeiden**
+        self.last_sent_linear_x = 0.0
+        self.last_sent_angular_z = None
+
+        self.reset_odometry()  
+
+    def reset_odometry(self):
+        """Setzt die Odometrie auf (0,0,0) zurück und speichert die aktuellen Encoder-Werte."""
         self.x = 0.0
         self.y = 0.0
         self.theta = 0.0
-        
-        # Geschwindigkeiten (lineare und winkelige)
         self.linear_x = 0.0
         self.angular_z = 0.0
-        self.last_time = self.get_clock().now()
-        
-        # Gleitender Durchschnitt der letzten 5 Positionen
-        self.position_history = deque(maxlen=5)
-        self.last_command_time = self.get_clock().now()
-        
-        # Timeout für die Reduzierung der Geschwindigkeit nach Inaktivität
-        self.cmd_timeout = 0.5
-        self.create_timer(0.02, self.update_odom)  # Update-Rate 50 Hz
 
-        # Definition der Rad-Offsets (Position der Räder relativ zum Base-Link)
-        self.wheel_offset_x = 0.226
-        self.wheel_offset_y = 0.1485
-        self.wheel_radius = 0.033
-        self.wheel_thickness = 0.026
+        self.encoder_left, self.encoder_right = self.fetch_encoder_data()
+        if self.encoder_left is None or self.encoder_right is None:
+            self.encoder_left, self.encoder_right = 0, 0
+
+        self.last_encoder_left = self.encoder_left
+        self.last_encoder_right = self.encoder_right
+
+        self.get_logger().info("🔄 Odometrie auf (0,0,0) zurückgesetzt.")
+
+        self.publish_odometry()
+        self.send_tf_transform()
+
+    def fetch_encoder_data(self):
+        """Holt Encoder-Daten vom ESP, aber mit reduzierter Frequenz."""
+        time.sleep(0.2)
+        try:
+            command = json.dumps({"T": 1001})
+            url = f"http://{ESP_IP}/js?json={quote(command, safe='{}:,')}"
+            response = requests.get(url, timeout=1.0)
+
+            if response.status_code == 200:
+                data = response.json()
+                if data is None or 'odr' not in data or 'odl' not in data:
+                    self.get_logger().error("⚠️ Leere oder unvollständige Encoder-Daten empfangen!")
+                    return None, None
+
+                time.sleep(0.2)
+
+                return data.get('odr', 0), data.get('odl', 0)
+            else:
+                self.get_logger().warn(f"⚠️ ESP-Befehl fehlgeschlagen, Status: {response.status_code}")
+                return None, None
+        except requests.exceptions.RequestException as e:
+            self.get_logger().error(f"⚠️ Kommunikationsfehler mit ESP: {e}")
+            return None, None
 
     def cmd_vel_callback(self, msg):
-        """Callback, um Befehle zu verarbeiten und Geschwindigkeiten zu setzen."""
-        self.linear_x = msg.linear.x * 5
-        self.angular_z = msg.angular.z * 5
-        self.last_command_time = self.get_clock().now()  # Zeitstempel aktualisieren
+        """Verarbeitet Steuerbefehle und sendet sie nur, wenn sie sich ändern."""
+        self.linear_x = msg.linear.x * 7
+        self.angular_z = msg.angular.z * 7
 
-    def update_odom(self):
-        """Aktualisiert die Odometrie und sendet Transformationsdaten."""
-        current_time = self.get_clock().now()
-        dt = (current_time - self.last_time).nanoseconds / 1e9
-        if dt <= 0.0:
-            return
+        threading.Thread(target=self.send_motor_command, args=(self.linear_x, self.angular_z), daemon=True).start()
+        self.get_logger().info(f"🟢 ERHALTEN: linear={self.linear_x}, angular={self.angular_z}")
 
-        # Wenn keine neuen Befehle kommen, Geschwindigkeit langsam reduzieren
-        #time_since_last_cmd = (current_time - self.last_command_time).nanoseconds / 1e9
-        #if time_since_last_cmd > self.cmd_timeout:
-        #    self.linear_x *= 0.95  # Exponentielles Abbremsen
-        #    self.angular_z *= 0.95
-        #    if abs(self.linear_x) < 0.01:
-        #        self.linear_x = 0.0
-        #    if abs(self.angular_z) < 0.01:
-        #        self.angular_z = 0.0
+        self.last_command_time = self.get_clock().now()
 
-        # Berechnung der neuen Position des `base_link`
-        new_x = self.x + self.linear_x * cos(self.theta) * dt
-        new_y = self.y + self.linear_x * sin(self.theta) * dt
-        new_theta = self.theta + self.angular_z * dt
+        if not hasattr(self, "send_command_timer"):
+            self.send_command_timer = self.create_timer(0.1, self.send_continuous_command)
 
-        # Speichern der Positionen für den gleitenden Durchschnitt
-        self.position_history.append((new_x, new_y, new_theta))
-        avg_x = sum(p[0] for p in self.position_history) / len(self.position_history)
-        avg_y = sum(p[1] for p in self.position_history) / len(self.position_history)
-        avg_theta = sum(p[2] for p in self.position_history) / len(self.position_history)
-
-        self.x, self.y, self.theta = avg_x, avg_y, avg_theta
-        self.last_time = current_time
-
-        # Odom-Nachricht: Aktualisierung der Position des base_link in der Odometrie
-        odom = Odometry()
-        odom.header.stamp = current_time.to_msg()
-        odom.header.frame_id = 'odom'
-        odom.child_frame_id = 'base_link'
-        odom.pose.pose.position.x = self.x
-        odom.pose.pose.position.y = self.y
-        odom.pose.pose.orientation.z = sin(self.theta / 2)
-        odom.pose.pose.orientation.w = cos(self.theta / 2)
-        self.odom_publisher.publish(odom)
-
-        # TF-Transformation: Transformation des base_link in das odom-Koordinatensystem
-        t = TransformStamped()
-        t.header.stamp = current_time.to_msg()
-        t.header.frame_id = 'odom'
-        t.child_frame_id = 'base_link'
-        t.transform.translation.x = self.x
-        t.transform.translation.y = self.y
-        t.transform.translation.z = 0.0
-        t.transform.rotation.z = sin(self.theta / 2)
-        t.transform.rotation.w = cos(self.theta / 2)
-        self.tf_broadcaster.sendTransform(t)
-
-        # Jetzt die Radrotation berechnen (keine Änderung der Position der Räder)
-        left_wheel_rotation = self.linear_x * dt / self.wheel_radius
-        right_wheel_rotation = self.linear_x * dt / self.wheel_radius
-
-        # Nur alle 100 ms an ESP senden
-        if (current_time - self.last_command_time).nanoseconds / 1e9 >= 0.2:
+    def send_continuous_command(self):
+        if (self.get_clock().now() - self.last_command_time).nanoseconds / 1e9 < 0.5:
             self.send_motor_command(self.linear_x, self.angular_z)
-            self.last_command_time = current_time
 
     def send_motor_command(self, linear_x, angular_z):
-        """Sendet Befehle an das ESP-Modul zur Steuerung des Motors."""
-        scaling_factor_circel = 0.0627
-        scaling_factor_straight = 0.09
+        """Sendet Befehle an das ESP-Modul, aber nur bei Änderungen."""
+        scaling_factor_circle = 0.0627
+        scaling_factor_straight = 0.1
         linear_x_scaled = linear_x * scaling_factor_straight
-        angular_z_scaled = angular_z * scaling_factor_circel
+        angular_z_scaled = angular_z * scaling_factor_circle
 
         left_motor_speed = linear_x_scaled - angular_z_scaled
         right_motor_speed = linear_x_scaled + angular_z_scaled
@@ -134,15 +124,84 @@ class ESPHttpControl(Node):
         json_command = json.dumps(command)
         encoded_command = quote(json_command)
         url = f"http://{ESP_IP}/js?json={encoded_command}"
-        try:
-            response = requests.get(url, timeout=0.5)
-            if response.status_code == 200:
-                self.get_logger().info(f"Command sent to ESP: {command}")
-            else:
-                self.get_logger().warn(f"Failed to send command to ESP, status code: {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            self.get_logger().error(f"Error communicating with ESP: {e}")
 
+        try:
+            response = requests.get(url, timeout=2)
+            time.sleep(0.2)
+
+            if response.status_code == 200:
+                self.get_logger().info(f"✅ ESP bestätigt Befehl: {command}")
+            else:
+                self.get_logger().warn(f"⚠️ ESP-Befehl fehlgeschlagen, Status: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            self.get_logger().error(f"❌ Kommunikationsfehler mit ESP: {e}")
+
+    def update_odom(self):
+        """Berechnet die Position basierend auf Encoder-Daten, aber weniger oft."""
+        current_time = self.get_clock().now()
+        dt = (current_time - self.last_command_time).nanoseconds / 1e9
+
+        if dt > 0.1:  # **Erhöhtes Intervall für weniger Requests**
+            dt = 0.1
+
+        new_encoder_left, new_encoder_right = self.fetch_encoder_data()
+
+        if new_encoder_left is None or new_encoder_right is None:
+            return  # Falls keine neuen Werte vorliegen, keine Aktualisierung
+
+        self.get_logger().info(f"Links = {new_encoder_left}, Rechts = {new_encoder_right}")
+
+        left_distance = (new_encoder_left - self.last_encoder_left) / self.TICKS_PER_REV_LEFT * (2 * pi * self.wheel_radius)
+        right_distance = (new_encoder_right - self.last_encoder_right) / self.TICKS_PER_REV_RIGHT * (2 * pi * self.wheel_radius)
+
+        avg_distance = (left_distance + right_distance) / 2.0
+
+        delta_theta = (left_distance - right_distance) / (2 * self.wheel_offset_x)
+
+        if abs(delta_theta) < 0.01:
+            delta_theta = 0.0
+
+        self.theta = (self.theta + delta_theta + pi) % (2 * pi) - pi
+
+        if abs(delta_theta) > 0.01:
+            self.x += avg_distance * cos(self.theta)
+            self.y += avg_distance * sin(self.theta)
+        else:
+            self.x += avg_distance
+
+        self.last_command_time = current_time
+
+        self.publish_odometry()
+        self.send_tf_transform()
+
+        self.last_encoder_left = new_encoder_left
+        self.last_encoder_right = new_encoder_right
+
+    def publish_odometry(self):
+        """Veröffentlicht die aktuelle Odometrie."""
+        odom = Odometry()
+        odom.header.stamp = self.get_clock().now().to_msg()
+        odom.header.frame_id = 'odom'
+        odom.child_frame_id = 'base_link'
+        odom.pose.pose.position.x = self.x
+        odom.pose.pose.position.y = self.y
+        odom.pose.pose.orientation.z = sin(self.theta / 2)
+        odom.pose.pose.orientation.w = cos(self.theta / 2)
+
+        self.odom_publisher.publish(odom)
+
+    def send_tf_transform(self):
+        """Sendet die TF-Transformation base_link → odom."""
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_link'
+        t.transform.translation.x = self.x
+        t.transform.translation.y = self.y
+        t.transform.rotation.z = sin(self.theta / 2)
+        t.transform.rotation.w = cos(self.theta / 2)
+
+        self.tf_broadcaster.sendTransform(t)
 
 def main():
     rclpy.init()
