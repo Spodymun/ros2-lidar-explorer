@@ -11,9 +11,10 @@ from collections import deque
 import sys
 import numpy as np
 import threading
-import time  
+import time
 
 ESP_IP = sys.argv[1]
+
 
 class ESPHttpControl(Node):
     def __init__(self):
@@ -45,12 +46,12 @@ class ESPHttpControl(Node):
 
         # Timer to periodically update odometry
         self.create_timer(0.1, self.update_odom)
-        
+
         # Store the last sent command to avoid redundant messages
         self.last_sent_linear_x = 0.0
         self.last_sent_angular_z = None
 
-        self.reset_odometry()  
+        self.reset_odometry()
 
     def reset_odometry(self):
         """Resets odometry to (0,0,0) and stores the current encoder values."""
@@ -139,6 +140,49 @@ class ESPHttpControl(Node):
         except requests.exceptions.RequestException as e:
             self.get_logger().error(f"Communication error with ESP: {e}")
 
+    def update_odom(self):
+        """Calculates the position based on encoder data, but less frequently."""
+        current_time = self.get_clock().now()
+        dt = (current_time - self.last_command_time).nanoseconds / 1e9
+
+        if dt > 0.1:
+            dt = 0.1
+
+        new_encoder_left, new_encoder_right = self.fetch_encoder_data()
+
+        if new_encoder_left is None or new_encoder_right is None:
+            return  
+
+        self.get_logger().info(f"Links = {new_encoder_left}, Rechts = {new_encoder_right}")
+
+        left_distance = (new_encoder_left - self.last_encoder_left) / self.TICKS_PER_REV_LEFT * (
+                    2 * pi * self.wheel_radius)
+        right_distance = (new_encoder_right - self.last_encoder_right) / self.TICKS_PER_REV_RIGHT * (
+                    2 * pi * self.wheel_radius)
+
+        avg_distance = (left_distance + right_distance) / 2.0
+
+        delta_theta = (left_distance - right_distance) / (2 * self.wheel_offset_x)
+
+        if abs(delta_theta) < 0.01:
+            delta_theta = 0.0
+
+        self.theta = (self.theta + delta_theta + pi) % (2 * pi) - pi
+
+        if abs(delta_theta) > 0.01:
+            self.x += avg_distance * cos(self.theta)
+            self.y += avg_distance * sin(self.theta)
+        else:
+            self.x += avg_distance
+
+        self.last_command_time = current_time
+
+        self.publish_odometry()
+        self.send_tf_transform()
+
+        self.last_encoder_left = new_encoder_left
+        self.last_encoder_right = new_encoder_right
+
     def publish_odometry(self):
         """Publishes the current odometry."""
         odom = Odometry()
@@ -165,6 +209,7 @@ class ESPHttpControl(Node):
 
         self.tf_broadcaster.sendTransform(t)
 
+
 def main():
     """Main function to start the ROS2 node."""
     rclpy.init()
@@ -172,6 +217,7 @@ def main():
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
