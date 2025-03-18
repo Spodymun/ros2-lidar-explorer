@@ -70,40 +70,49 @@ sudo apt update && sudo apt install -y \
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
-# Matching your System
+# Matching Your System
 
 ## Matching Your Robot
 
 ### Measuring Wheel Radius & Wheel Distance
-1. **Measure Wheel Radius**: Ensure the wheel radius is correct (`self.wheel_radius = 0.033`).
-2. **Measure Wheel Distance**: Verify the distance between the wheels (`2 * self.wheel_offset_x = 0.3`).
+1. **`self.wheel_radius`**: Do not take real measurements, adjust it manually until the odometry matches the real-life movement.
+2. **`self.wheel_offset_x`**: Do not take real measurements, adjust it manually until the odometry matches the real-life movement.
+
+---
 
 ## Encoder Ticks & Motion Calibration
 
 ### 1. Measuring Encoder Ticks per Revolution
-1. **Prepare the wheel**: It must be free to rotate.
+1. **Prepare the wheel**: Ensure it is free to rotate.
 2. **Read the initial value**: Note the encoder reading.
 3. **Rotate the wheel**: Complete one full revolution.
 4. **Read the new value**: Calculate the difference:
+
    ```python
    TICKS_PER_REV = encoder_after - encoder_before
    print(f"Ticks per revolution: {TICKS_PER_REV}")
    ```
 ### 2. Calibrating Straight-Line Motion
-1. **Perform the test**: Command the robot to move 1m forward (`cmd_vel.linear.x = 0.1` for 10s).
-2. **Measure the distance**: Compare actual distance vs. simulation (`/odom` in RVIZ).
-3. **Adjust the scaling factor**:
+1. **Perform the test**: Use `move.py` to move the robot forward.
+2. **Measure the distance**:  
+   - Observe the actual distance the robot moves.  
+   - Compare it with the distance shown in the `/odom` data in RViz.  
+3. **Adjust the scaling factor in `esp_http_control.py`**:
+   
    ```python
-   scaling_factor_straight *= rviz_distance / actual_distance
+   scaling_factor_straight = rviz_distance / actual_distance
    ```
    If the robot moves too short, increase the factor. If it moves too far, decrease it.
 
 ### 3. Calibrating Rotational Motion
-1. **Perform the test**: Command the robot to rotate 360° (`cmd_vel.angular.z = 0.1` for 10s).
-2. **Measure the rotation angle**: Compare actual vs. RVIZ rotation.
-3. **Adjust the scaling factor**:
+1. **Perform the test**: Use `move.py` to rotate the robot in place.
+2. **Measure the rotation angle**:  
+   - Check how much the robot has turned in reality.  
+   - Compare this with the rotation angle shown in the `/odom` data in RViz.  
+3. **Adjust the scaling factor in `esp_http_control.py`**:  
+
    ```python
-   scaling_factor_circle *= rviz_angle / actual_angle
+   scaling_factor_circle = rviz_angle / actual_angle
    ```
    If the rotation is too small, increase the factor. If it's too large, decrease it.
    
