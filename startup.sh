@@ -41,13 +41,13 @@ bg_pid3=$!
 echo "Process 3 (online_async_launch.py) started in the background, PID: $bg_pid3"
 
 # 4. Start teleop_twist_keyboard in a new terminal for manual control
-gnome-terminal -- bash -c "ros2 run teleop_twist_keyboard teleop_twist_keyboard; exec bash" &
+gnome-terminal -- bash -c "ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/cmd_vel_teleop; exec bash" &
 bg_pid4=$!
 echo "Process 4 (teleop_twist_keyboard) started in a new terminal, PID: $bg_pid4"
 
 # 5. Start the ESP control script with the provided IP
 cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 esp_http_control.py "$ESP_IP" &
+python3 esp_http_control.py "$ESP_IP" & 
 bg_pid5=$!
 echo "Process 5 (esp_http_control.py) started in the background with IP $ESP_IP, PID: $bg_pid5"
 
@@ -55,6 +55,16 @@ echo "Process 5 (esp_http_control.py) started in the background with IP $ESP_IP,
 gnome-terminal -- bash -c "rviz2; exec bash" &
 bg_pid6=$!
 echo "Process 6 (rviz2) started in a new terminal, PID: $bg_pid6"
+
+# 7. Start Nav2 for navigation
+ros2 launch nav2_bringup navigation_launch.py use_sime_time:=false &
+bg_pid7=$!
+echo "Process 7 (navigation_launch.py started in the background), PID: $bg_pid7"
+
+# 8. Start Twist_mux for input controll
+ros2 launch ros2-lidar-explorer twist_mux_launch.py &
+bg_pid8=$!
+echo "Process 8 (twist_mux_launch), PID: $bg_pid8"
 
 # Wait to prevent the script from exiting immediately
 wait
