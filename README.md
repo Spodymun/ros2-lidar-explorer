@@ -66,7 +66,9 @@ sudo apt update && sudo apt install -y \
     ros-jazzy-launch \
     ros-jazzy-launch-ros \
     ros-jazzy-ament-index-python \
-    ros-jazzy-xacro    
+    ros-jazzy-xacro \
+    ros-jazzy-navigation2 \
+    ros-jazzy-twist-mux  
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
