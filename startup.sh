@@ -66,5 +66,11 @@ ros2 launch ros2-lidar-explorer twist_mux_launch.py &
 bg_pid8=$!
 echo "Process 8 (twist_mux_launch), PID: $bg_pid8"
 
+# 9. Start the ESP control script with the provided IP
+#cd ~/ws_lidar/src/m-explore-ros2/map_merge/launch
+#python3 map_merge.launch.py "$ESP_IP" & 
+#bg_pid9=$!
+#echo "Process 9 (map_merge.launch.py) started in the background, PID: $bg_pid9"
+
 # Wait to prevent the script from exiting immediately
 wait
