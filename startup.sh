@@ -51,8 +51,8 @@ python3 esp_http_control.py "$ESP_IP" &
 bg_pid5=$!
 echo "Process 5 (esp_http_control.py) started in the background with IP $ESP_IP, PID: $bg_pid5"
 
-# 6. Start RVIZ2 in a new terminal for visualization
-gnome-terminal -- bash -c "rviz2; exec bash" &
+# 6. Start RVIZ2 in a new terminal for visualization # -d ~/ws_lidar/src/ros2-lidar-explorer/rviz/explore.rviz
+gnome-terminal -- bash -c "rviz2 -d ~/ws_lidar/src/ros2-lidar-explorer/rviz/basic.rviz; exec bash" &
 bg_pid6=$!
 echo "Process 6 (rviz2) started in a new terminal, PID: $bg_pid6"
 
@@ -67,10 +67,10 @@ bg_pid8=$!
 echo "Process 8 (twist_mux_launch), PID: $bg_pid8"
 
 # 9. Start the ESP control script with the provided IP
-#cd ~/ws_lidar/src/m-explore-ros2/map_merge/launch
-#python3 map_merge.launch.py "$ESP_IP" & 
-#bg_pid9=$!
-#echo "Process 9 (map_merge.launch.py) started in the background, PID: $bg_pid9"
+# cd ~/ws_lidar/src/m-explore-ros2/map_merge/launch
+# python3 map_merge.launch.py "$ESP_IP" & 
+# bg_pid9=$!
+# echo "Process 9 (map_merge.launch.py) started in the background, PID: $bg_pid9"
 
 # Wait to prevent the script from exiting immediately
 wait

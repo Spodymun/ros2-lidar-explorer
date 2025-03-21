@@ -29,6 +29,7 @@ class ESPHttpControl(Node):
             self.cmd_vel_callback,
             10
         )
+        
 
         # Create odometry publisher and TF broadcaster
         self.odom_publisher = self.create_publisher(Odometry, '/odom', 10)
@@ -75,7 +76,7 @@ class ESPHttpControl(Node):
 
     def fetch_encoder_data(self):
         """Fetches encoder data from ESP, but at a reduced frequency."""
-        time.sleep(0.2)
+        time.sleep(0.1)
         try:
             command = json.dumps({"T": 1001})
             url = f"http://{ESP_IP}/js?json={quote(command, safe='{}:,')}"
@@ -96,10 +97,16 @@ class ESPHttpControl(Node):
             self.get_logger().error(f"Communication error with ESP: {e}")
             return None, None
 
-    def cmd_vel_callback(self, msg):
+    def cmd_vel_callback(self, msg: Twist):
         """Processes velocity commands and sends them only if they change."""
-        self.linear_x = msg.linear.x * 7
-        self.angular_z = msg.angular.z * 7
+        max_linear_speed = 0.5
+        max_angular_speed = 1.9
+
+        self.linear_x = msg.linear.x * -1
+        self.angular_z = msg.angular.z 
+
+        # self.linear_x = max(min(msg.linear.x / max_linear_speed, 1.0), -1.0)
+        # self.angular_x = max(min(msg.angular.x / max_angular_speed, 1.0), -1.0)
 
         threading.Thread(target=self.send_motor_command, args=(self.linear_x, self.angular_z), daemon=True).start()
         self.get_logger().info(f"RECEIVED: linear={self.linear_x}, angular={self.angular_z}")
@@ -118,11 +125,11 @@ class ESPHttpControl(Node):
         """Sends commands to the ESP module, but only on changes."""
         scaling_factor_circle = 0.0627
         scaling_factor_straight = 0.1
-        linear_x_scaled = linear_x * scaling_factor_straight
+        linear_x_scaled = linear_x  # * scaling_factor_straight
         angular_z_scaled = angular_z * scaling_factor_circle
 
-        left_motor_speed = linear_x_scaled - angular_z_scaled
-        right_motor_speed = linear_x_scaled + angular_z_scaled
+        left_motor_speed = (linear_x_scaled - angular_z_scaled) # * -1
+        right_motor_speed = (linear_x_scaled + angular_z_scaled) # * -1
 
         command = {"T": 1, "L": left_motor_speed, "R": right_motor_speed}
         json_command = json.dumps(command)
@@ -143,10 +150,16 @@ class ESPHttpControl(Node):
     def update_odom(self):
         """Calculates the position based on encoder data, but less frequently."""
         current_time = self.get_clock().now()
-        dt = (current_time - self.last_command_time).nanoseconds / 1e9
+        
+        if not hasattr(self, "last_odom_time"):
+            self.last_odom_time = current_time
+            return
 
-        if dt > 0.1:
-            dt = 0.1
+        dt = (current_time - self.last_odom_time).nanoseconds / 1e9
+
+        if dt == 0.0:
+            return
+        self.last_odom_time = current_time
 
         new_encoder_left, new_encoder_right = self.fetch_encoder_data()
 
@@ -174,8 +187,6 @@ class ESPHttpControl(Node):
             self.y += avg_distance * sin(self.theta)
         else:
             self.x += avg_distance
-
-        self.last_command_time = current_time
 
         self.publish_odometry()
         self.send_tf_transform()
