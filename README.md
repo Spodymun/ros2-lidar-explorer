@@ -72,6 +72,47 @@ sudo apt update && sudo apt install -y \
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
+#### 🧠 Autonomic Driving Integration for ROS 2 (Jazzy)
+
+First, clone the `m-explore-ros2` exploration package into your workspace:
+
+```bash
+cd ~/ws_lidar/src
+git clone https://github.com/robo-friends/m-explore-ros2.git
+```
+##### 🛠 Fixing Compatibility with ROS 2 Jazzy
+
+ROS 2 Jazzy introduced a breaking change in the `tf2_geometry_msgs` package.  
+The header file `tf2_geometry_msgs.h` has been renamed to `tf2_geometry_msgs.hpp`.  
+To update all source files accordingly, run:
+
+```bash
+find ~/ws_lidar/src -type f \( -name "*.cpp" -or -name "*.h" -or -name "*.hpp" \) | xargs sed -i 's|tf2_geometry_msgs/tf2_geometry_msgs.h|tf2_geometry_msgs/tf2_geometry_msgs.hpp|g'
+```
+##### 🧩 Updating Timer Callbacks
+
+In **ROS 2 Jazzy**, the method `execute_callback()` from `rclcpp::TimerBase` has changed.  
+It now requires an **explicit argument** of type `std::shared_ptr<void>`.  
+To maintain compatibility, update all direct calls as shown below:
+
+```cpp
+map_merging_timer_->execute_callback();
+topic_subscribing_timer_->execute_callback();
+pose_estimation_timer_->execute_callback();
+```
+to:
+```cpp
+map_merging_timer_->execute_callback(nullptr);
+topic_subscribing_timer_->execute_callback(nullptr);
+pose_estimation_timer_->execute_callback(nullptr);
+```
+Once the changes are complete, build your ROS 2 workspace to apply them:
+
+```bash
+cd ~/ws_lidar
+colcon build --symlink-install
+```
+
 # Matching Your System
 
 ## Matching Your Robot
