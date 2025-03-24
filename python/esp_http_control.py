@@ -103,7 +103,7 @@ class ESPHttpControl(Node):
         max_angular_speed = 1.9
 
         self.linear_x = msg.linear.x 
-        self.angular_z = msg.angular.z 
+        self.angular_z = msg.angular.z * -1 
 
         # self.linear_x = max(min(msg.linear.x / max_linear_speed, 1.0), -1.0)
         # self.angular_x = max(min(msg.angular.x / max_angular_speed, 1.0), -1.0)
@@ -123,7 +123,7 @@ class ESPHttpControl(Node):
 
     def send_motor_command(self, linear_x, angular_z):
         """Sends commands to the ESP module, but only on changes."""
-        scaling_factor_circle = 0.18
+        scaling_factor_circle = 0.18    
         scaling_factor_straight = 0.1
         linear_x_scaled = linear_x  # * scaling_factor_straight
         angular_z_scaled = angular_z * scaling_factor_circle
