@@ -15,6 +15,7 @@ I (**hopefully**) added the full list down below.
 By cloning this repository, you'll be able to:  
 ✅ Use **LiDAR A1/A2** for mapping  
 ✅ Create a **SLAM map** using `slam_toolbox`  
+✅ Navigates trough the Map using **Nav2**
 
 ---
 
