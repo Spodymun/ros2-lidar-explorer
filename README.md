@@ -6,7 +6,7 @@ This project is based on **@Articulated Robotics' YouTube tutorials** ([Playlist
 I followed the series up to **"Using ros2_control to drive our robot (off the edge of the bench...)"** but have since made **many modifications**.  
 
 Please review the **differences yourself**, as well as the **dependencies** used in the original videos.  
-I may add a full dependency list soon (**hopefully**).  
+I (**hopefully**) added the full list down below.  
 
 ---
 
@@ -44,7 +44,6 @@ Follow this guide to set up a workspace:
   cd ~/ws_lidar/src
   git clone https://github.com/Spodymun/ros2-lidar-explorer
   ```
-Please check my code for any necessary IP address changes.
 You'll need to set up a hotspot using a laptop, mobile phone, or another compatible device.
 Once connected, you can find the IP address of your ESP.
 
@@ -161,16 +160,9 @@ colcon build --symlink-install
    
 # ▶️ Running the Project  
 
-Once everything is set up, follow these steps to launch mapping.  
+Once everything is set up, follow these steps to launch mapping and navigation.  
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
 ./startup.sh IP_ADRESS_OF_YOUR_ESP
 ```
-In Rviz you'll have to add laser_scan, map, robot and tf.
-   - By display type laser_scan - by topic /scan
-   - By display type map - by topic /map
-   - By display type RobotModel
-     - Description Topic /robot_description
-
-Set your fixed frames to odom until the map is loaded, then set it to map and start exploring.
