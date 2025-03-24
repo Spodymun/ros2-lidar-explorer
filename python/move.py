@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 import time
+import math
 
 class MoveRobot(Node):
     def __init__(self):
@@ -12,10 +13,10 @@ class MoveRobot(Node):
     def move_for_seconds(self):
         """Lässt den Roboter genau `duration` Sekunden fahren."""
         twist = Twist()
-        twist.linear.x = 0.1   # straight
-        twist.angular.z = 0.0  # circle
+        twist.linear.x = 0.1  # straight
+        # twist.angular.z = 0.3 # circle
 
-        duration_notactive = 6.283 / 0.1 * 0.4
+        # duration_notactive = (2 * math.pi) / twist.angular.z
         duration_active = 10
 
         self.get_logger().info(f"🚀 Roboter fährt für {duration_active} Sekunden...")

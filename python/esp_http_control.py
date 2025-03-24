@@ -36,17 +36,17 @@ class ESPHttpControl(Node):
         self.tf_broadcaster = TransformBroadcaster(self)
 
         # Robot-specific parameters
-        self.wheel_offset_x = 0.207  # Half of the distance between the wheels
-        self.wheel_radius = 0.038  # Wheel radius
-        self.TICKS_PER_REV_LEFT = 24  # Encoder ticks per revolution (left wheel)
-        self.TICKS_PER_REV_RIGHT = 25  # Encoder ticks per revolution (right wheel)
+        self.wheel_offset_x = 0.174  # Half of the distance between the wheels
+        self.wheel_radius = 0.037  # Wheel radius
+        self.TICKS_PER_REV_LEFT = 23  # Encoder ticks per revolution (left wheel)
+        self.TICKS_PER_REV_RIGHT = 23  # Encoder ticks per revolution (right wheel)
 
         self.position_history = deque(maxlen=5)
         self.last_command_time = self.get_clock().now()
         self.cmd_timeout = 0.5  # Timeout for velocity commands
 
         # Timer to periodically update odometry
-        self.create_timer(0.1, self.update_odom)
+        self.create_timer(0.05, self.update_odom)
 
         # Store the last sent command to avoid redundant messages
         self.last_sent_linear_x = 0.0
@@ -88,7 +88,7 @@ class ESPHttpControl(Node):
                     self.get_logger().error("Received empty or incomplete encoder data!")
                     return None, None
 
-                time.sleep(0.2)
+                time.sleep(0.1)
                 return data.get('odr', 0), data.get('odl', 0)
             else:
                 self.get_logger().warn(f"ESP command failed, Status: {response.status_code}")
@@ -102,7 +102,7 @@ class ESPHttpControl(Node):
         max_linear_speed = 0.5
         max_angular_speed = 1.9
 
-        self.linear_x = msg.linear.x * -1
+        self.linear_x = msg.linear.x 
         self.angular_z = msg.angular.z 
 
         # self.linear_x = max(min(msg.linear.x / max_linear_speed, 1.0), -1.0)
@@ -123,13 +123,13 @@ class ESPHttpControl(Node):
 
     def send_motor_command(self, linear_x, angular_z):
         """Sends commands to the ESP module, but only on changes."""
-        scaling_factor_circle = 0.0627
+        scaling_factor_circle = 0.18
         scaling_factor_straight = 0.1
         linear_x_scaled = linear_x  # * scaling_factor_straight
         angular_z_scaled = angular_z * scaling_factor_circle
 
-        left_motor_speed = (linear_x_scaled - angular_z_scaled) # * -1
-        right_motor_speed = (linear_x_scaled + angular_z_scaled) # * -1
+        left_motor_speed = (linear_x_scaled - angular_z_scaled) 
+        right_motor_speed = (linear_x_scaled + angular_z_scaled) 
 
         command = {"T": 1, "L": left_motor_speed, "R": right_motor_speed}
         json_command = json.dumps(command)
