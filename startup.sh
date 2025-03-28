@@ -18,6 +18,9 @@ cleanup() {
     kill $bg_pid4
     kill $bg_pid5
     kill $bg_pid6
+    kill $bg_pid7
+    kill $bg_pid8
+    kill $bg_pid9
 }
 
 # Ensure the cleanup function is executed when the script exits
@@ -65,6 +68,12 @@ echo "Process 7 (navigation_launch.py started in the background), PID: $bg_pid7"
 ros2 launch ros2-lidar-explorer twist_mux_launch.py &
 bg_pid8=$!
 echo "Process 8 (twist_mux_launch), PID: $bg_pid8"
+
+# 5. Start the ESP control script with the provided IP
+# cd ~/ws_lidar/src/ros2-lidar-explorer/python
+# python3 goal_reacher.py "$ESP_IP" & 
+# bg_pid9=$!
+# echo "Process 9 (esp_http_control.py) started in the background with IP $ESP_IP, PID: $bg_pid9"
 
 # 9. Start the ESP control script with the provided IP
 # cd ~/ws_lidar/src/m-explore-ros2/map_merge/launch
