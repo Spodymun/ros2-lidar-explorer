@@ -5,8 +5,12 @@
 This project is based on **@Articulated Robotics' YouTube tutorials** ([Playlist](https://www.youtube.com/playlist?list=PLunhqkrRNRhYAffV8JDiFOatQXuU-NnxT)).  
 I followed the series up to **"Using ros2_control to drive our robot (off the edge of the bench...)"** but have since made **many modifications**.  
 
+## ⚠️ IMPORTANT
+
 Please review the **differences yourself**, as well as the **dependencies** used in the original videos.  
-I (**hopefully**) added the full list down below.  
+I (**hopefully**) added the full list down below.
+
+After cloning the other repositories, make sure to visit them yourself and work through their individual setup guides.
 
 ---
 
@@ -68,7 +72,10 @@ sudo apt update && sudo apt install -y \
     ros-jazzy-ament-index-python \
     ros-jazzy-xacro \
     ros-jazzy-navigation2 \
-    ros-jazzy-twist-mux  
+    ros-jazzy-twist-mux \
+    ros-jazzy-ros2-control \
+    ros-jazzy-controller-manager
+
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
