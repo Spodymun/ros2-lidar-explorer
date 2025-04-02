@@ -72,7 +72,81 @@ sudo apt update && sudo apt install -y \
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
-#### 🧠 Autonomic Driving Integration for ROS 2 (Jazzy)
+---
+
+### 🛠️ Setting Up RPLidar with ROS 2
+
+This guide explains how to clone and configure the `sllidar_ros2` package to work with your RPLidar device in a ROS 2 workspace.
+
+#### 📦 1. Clone the `sllidar_ros2` Driver
+
+Navigate to your workspace’s `src` directory and clone the official ROS 2 driver from Slamtec:
+
+```bash
+cd ~/ws_lidar/src
+git clone https://github.com/Slamtec/sllidar_ros2
+```
+
+#### ⚙️ 2. Configure the Driver
+
+After cloning, navigate to the launch folder:
+
+```bash
+cd ~/ws_lidar/src/sllidar_ros2/launch
+ls
+```
+
+Find the launch file that matches your RPLidar model.  
+For example, if you're using an **A2M8**, it will likely be:
+
+```bash
+sllidar_a2m8_launch.py
+```
+
+Then make the following manual adjustments in that file:
+
+##### ✅ Update `frame_id`
+
+- Replace all instances of `laser` with `laser_frame`
+- This ensures TF compatibility across your system
+
+##### ✅ Set the `scan_mode`
+
+- Change `scan_mode` to `"Standard"`  
+- You can use another supported mode if your model requires it
+
+#### ✍️ 3. Edit the Startup File
+
+If you’re using a different model than the A2M8, make sure to update your startup script accordingly:
+
+```bash
+cd ~/ws_lidar/src/ros2-lidar-explorer
+sudo nano startup.sh
+```
+
+Look for this line:
+
+```bash
+ros2 launch sllidar_ros2 sllidar_a2m8_launch.py
+```
+
+Change `sllidar_a2m8_launch.py` to the appropriate launch file for your Lidar model.
+
+#### 🚀 4. Rebuild and Source the Workspace
+
+Once your changes are made:
+
+```bash
+cd ~/ws_lidar
+colcon build
+source install/setup.bash
+```
+
+Now your RPLidar should be ready to run with the correct configuration!
+
+---
+
+### 🧠 Autonomic Driving Integration for ROS 2 (Jazzy)
 
 First, clone the `m-explore-ros2` exploration package into your workspace:
 
@@ -80,7 +154,7 @@ First, clone the `m-explore-ros2` exploration package into your workspace:
 cd ~/ws_lidar/src
 git clone https://github.com/robo-friends/m-explore-ros2.git
 ```
-##### 🛠 Fixing Compatibility with ROS 2 Jazzy
+#### 🛠 Fixing Compatibility with ROS 2 Jazzy
 
 ROS 2 Jazzy introduced a breaking change in the `tf2_geometry_msgs` package.  
 The header file `tf2_geometry_msgs.h` has been renamed to `tf2_geometry_msgs.hpp`.  
@@ -89,7 +163,7 @@ To update all source files accordingly, run:
 ```bash
 find ~/ws_lidar/src -type f \( -name "*.cpp" -or -name "*.h" -or -name "*.hpp" \) | xargs sed -i 's|tf2_geometry_msgs/tf2_geometry_msgs.h|tf2_geometry_msgs/tf2_geometry_msgs.hpp|g'
 ```
-##### 🧩 Updating Timer Callbacks
+#### 🧩 Updating Timer Callbacks
 
 In **ROS 2 Jazzy**, the method `execute_callback()` from `rclcpp::TimerBase` has changed.  
 It now requires an **explicit argument** of type `std::shared_ptr<void>`.  
@@ -112,6 +186,7 @@ Once the changes are complete, build your ROS 2 workspace to apply them:
 cd ~/ws_lidar
 colcon build --symlink-install
 ```
+---
 
 # Matching Your System
 
@@ -120,8 +195,6 @@ colcon build --symlink-install
 ### Measuring Wheel Radius & Wheel Distance
 1. **`self.wheel_radius`**: Do not take real measurements, adjust it manually until the odometry matches the real-life movement.
 2. **`self.wheel_offset_x`**: Do not take real measurements, adjust it manually until the odometry matches the real-life movement.
-
----
 
 ## Encoder Ticks & Motion Calibration
 
@@ -158,6 +231,8 @@ colcon build --symlink-install
    scaling_factor_circle = rviz_angle / actual_angle
    ```
    If the rotation is too small, increase the factor. If it's too large, decrease it.
+
+---
    
 # ▶️ Running the Project  
 
