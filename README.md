@@ -141,7 +141,7 @@ Change `sllidar_a2m8_launch.py` to the appropriate launch file for your Lidar mo
 
 #### 🚀 4. Rebuild and Source the Workspace
 
-Once your changes are made:
+Once your changes are made, rebuild your ROS 2 workspace:
 
 ```bash
 cd ~/ws_lidar
@@ -149,7 +149,10 @@ colcon build
 source install/setup.bash
 ```
 
-Now your RPLidar should be ready to run with the correct configuration!
+> 💡 If `colcon build` throws an error the first time, just try it again.  
+> Sometimes it resolves itself after a clean rebuild.
+
+Now your RPLidar should be ready to run with the correct configuration! 🎉
 
 ---
 
