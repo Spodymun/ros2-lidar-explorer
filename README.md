@@ -74,8 +74,8 @@ sudo apt update && sudo apt install -y \
     ros-jazzy-navigation2 \
     ros-jazzy-twist-mux \
     ros-jazzy-ros2-control \
-    ros-jazzy-controller-manager
-
+    ros-jazzy-controller-manager \
+    ros-jazzy-nav2-bringup
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
