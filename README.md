@@ -112,15 +112,40 @@ sllidar_a2m8_launch.py
 
 Then make the following manual adjustments in that file:
 
-##### ✅ Update `frame_id`
+#### ✅ Update `frame_id`
 
 - Replace all instances of `laser` with `laser_frame`
 - This ensures TF compatibility across your system
 
-##### ✅ Set the `scan_mode`
+#### ✅ Set the `scan_mode`
 
-- Change `scan_mode` to `"Standard"`  
-- You can use another supported mode if your model requires it
+- Add or update the parameter `scan_mode` to `"Standard"`
+- You can use another supported mode if your LIDAR model requires it
+
+#### ✅ Update the launch configuration
+
+Make sure your node is defined like this in your launch file:
+
+```python
+Node(
+    package='sllidar_ros2',
+    executable='sllidar_node',
+    name='sllidar_node',
+    parameters=[{
+        'channel_type': channel_type,
+        'serial_port': serial_port,
+        'serial_baudrate': serial_baudrate,
+        'frame_id': 'laser_frame',
+        'inverted': inverted,
+        'angle_compensate': angle_compensate,
+        'scan_mode': 'Standard'
+    }],
+    remappings=[
+        ('/scan', '/scan_raw')  # Remap original scan topic
+    ],
+    output='screen'
+)
+```
 
 #### ✍️ 3. Edit the Startup File
 
@@ -189,6 +214,18 @@ to:
 map_merging_timer_->execute_callback(nullptr);
 topic_subscribing_timer_->execute_callback(nullptr);
 pose_estimation_timer_->execute_callback(nullptr);
+```
+#### 🐢 Slower robot = more patience
+
+Since my robot moves a bit slower, I had to give it more time to plan and make progress.  
+To do this, I adjusted the following parameters in:
+
+```bash
+m-explore-ros2/explore/config/params.yaml
+```
+```yaml
+planner_frequency: 0.1
+progress_timeout: 40.0
 ```
 Once the changes are complete, build your ROS 2 workspace to apply them:
 
