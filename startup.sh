@@ -29,6 +29,7 @@ cleanup() {
     kill $bg_pid7
     kill $bg_pid8
     kill $bg_pid9
+    kill $bg_pid10
 }
 
 # Ensure the cleanup function is executed when the script exits
@@ -45,6 +46,18 @@ echo "Process 1 (launch_robot.launch.py) started in the background, PID: $bg_pid
 ros2 launch sllidar_ros2 sllidar_a2m8_launch.py &
 bg_pid2=$!
 echo "Process 2 (rplidar.launch.py) started in the background, PID: $bg_pid2"
+
+until ros2 topic echo /scan_raw --once; do
+  echo "⏳ Warte auf /scan_raw..."
+  sleep 1
+done
+echo "✅ /scan_raw verfügbar – starte Relay..."
+
+# 2.5 Start relay node
+cd ~/ws_lidar/src/ros2-lidar-explorer/python
+python3 scan_timestamp_relay.py &
+bg_pid10=$!
+echo "Process 10 (relay /scan_raw ➝ /scan) gestartet, PID: $bg_pid10"
 
 until ros2 topic echo /scan --once; do
   echo "Warte auf /scan..."
@@ -74,7 +87,10 @@ bg_pid6=$!
 echo "Process 6 (rviz2) started in a new terminal, PID: $bg_pid6"
 
 # 7. Start Nav2 for navigation
-ros2 launch nav2_bringup navigation_launch.py params_file:=/home/robi/ws_lidar/src/ros2-lidar-explorer/config/nav2_params.yaml &
+ros2 launch nav2_bringup navigation_launch.py \
+  autostart:=true \
+  use_lifecycle_mgr:=true \
+  params_file:=/home/robi/ws_lidar/src/ros2-lidar-explorer/config/nav2_params.yaml &
 bg_pid7=$!
 echo "Process 7 (navigation_launch.py) started in the background, PID: $bg_pid7"
 
@@ -83,17 +99,11 @@ ros2 launch ros2-lidar-explorer twist_mux_launch.py &
 bg_pid8=$!
 echo "Process 8 (twist_mux_launch) started in the background, PID: $bg_pid8"
 
-# 9. Start explore_lite for autonomous exploration
-# ros2 run explore_lite explore \
-#  --ros-args \
-#  --params-file /home/robi/ws_lidar/src/m-explore-ros2/explore/config/params.yaml \
-#  -p use_sim_time:=false \
-#  -r /map:=/map \
-#  -r /cmd_vel:=/cmd_vel \
-#  -r /tf:=/tf \
-#  -r /tf_static:=/tf_static &
-# bg_pid9=$!
-# echo "Process 9 (explore_lite) started in the background, PID: $bg_pid9"
+# 9. Start the ESP control script with the provided IP
+cd ~/ws_lidar/src/ros2-lidar-explorer/python
+python3 relaunch.py &
+bg_pid9=$!
+echo "Process 5 (esp_http_control.py) started in the background with IP $ESP_IP, PID: $bg_pid5"
 
 # Wait to prevent the script from exiting immediately
 wait
