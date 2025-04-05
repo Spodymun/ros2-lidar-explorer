@@ -19,7 +19,7 @@ After cloning the other repositories, make sure to visit them yourself and work 
 By cloning this repository, you'll be able to:  
 ✅ Use **LiDAR A1/A2** for mapping  
 ✅ Create a **SLAM map** using `slam_toolbox`  
-✅ Navigates trough the Map using **Nav2**
+✅ Navigates autonomously through the Room using **Nav2** and **m-explore-nav2**
 
 ---
 
@@ -27,8 +27,8 @@ By cloning this repository, you'll be able to:
 
 - **UGV Platform:** Waveshare UGV02  
 - **Compute:** Raspberry Pi 5 + Active Cooler  
-  - Running **Ubuntu Noble 24.04**  
-- **LiDAR Sensor:** A2M8 - R4  
+  - Running **Ubuntu Noble (Pro) 24.04**  
+- **LiDAR Sensor:** A2M8 
 
 ---
 
@@ -49,12 +49,12 @@ Follow this guide to set up a workspace:
   cd ~/ws_lidar/src
   git clone https://github.com/Spodymun/ros2-lidar-explorer
   ```
-You'll need to set up a hotspot using a laptop, mobile phone, or another compatible device.
-Once connected, you can find the IP address of your ESP.
+You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
+Once the device is connected to the hotspot, you can locate the IP address of your ESP.
+
+> ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
 
 #### 📦 Essential Packages  
-Please check **@Articulated Robotics' videos** videos for details. 
-
 Run the following command to install the necessary ROS 2 packages:
 
 ```bash
@@ -112,15 +112,15 @@ sllidar_a2m8_launch.py
 
 Then make the following manual adjustments in that file:
 
-#### ✅ Update `frame_id`
-
-- Replace all instances of `laser` with `laser_frame`
-- This ensures TF compatibility across your system
-
 #### ✅ Set the `scan_mode`
 
 - Add or update the parameter `scan_mode` to `"Standard"`
 - You can use another supported mode if your LIDAR model requires it
+
+#### ✅ Update `frame_id`
+
+- Replace all instances of `laser` with `laser_frame`
+- This ensures TF compatibility across your system
 
 #### ✅ Update the launch configuration
 
@@ -235,6 +235,43 @@ colcon build --symlink-install
 ```
 ---
 
+## 🛠️ Troubleshooting: TF Transformation Delays & Nav2 Shutdowns
+
+I ran into a persistent issue where my navigation tool (Nav2) kept shutting down without any obvious errors. After **many hours of debugging**, I finally discovered the root cause:  
+➡️ **The TF transformations were too slow**, which caused Nav2 to stop working due to missing or outdated "live" data.
+
+### ✅ My Fix: Real-Time Data Optimization
+
+To solve this, I took several steps:
+
+1. **Upgraded to Ubuntu Pro** ([Get it here – it's free](https://ubuntu.com/pro/subscribe))  
+   Ubuntu Pro allowed me to access better real-time processing capabilities, which significantly **improved the speed of TF frame transformations**.
+
+2. **Increased TF tolerances in Nav2**  
+   I changed **all transform tolerances** in the `nav2_params.yaml` config file to `1.0`.  
+   You can find this configuration in:  
+   ```yaml
+   config/nav2_params.yaml
+   ```
+3. **Adjusted scan data publishing timing**  
+   I added a custom script that adjusts the timestamp of the scan data.  
+   - Original data is published on: `/scan_raw`  
+   - The script updates the time frame and republishes it on: `/scan`  
+   - 📄 The script can be found here:  
+     ```python
+     python/scan_timestamp_relay.py
+     ```
+
+> ⚙️ If you cloned this repo, steps 2 and 3 are **already included**.
+
+### 🔄 Still Having Issues?
+
+If you're still running into unexplained Nav2 crashes or TF timeout issues, I **highly recommend upgrading to Ubuntu Pro** and experimenting with:
+- TF tolerances in the Nav2 config
+- Timing of your sensor data publication
+
+---
+
 # Matching Your System
 
 ## Matching Your Robot
@@ -283,7 +320,7 @@ colcon build --symlink-install
    
 # ▶️ Running the Project  
 
-Once everything is set up, follow these steps to launch mapping and navigation.  
+Once everything is set up, follow these steps to launch mapping.  
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
