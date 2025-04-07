@@ -3,12 +3,9 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Duration
-
 from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped
-
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
-
 import time
 
 class NavigateRelay(Node):
@@ -87,7 +84,6 @@ class NavigateRelay(Node):
         elif status == 2:  # CANCELED
             goal_handle.canceled()
             self.get_logger().warn('Ziel wurde von Nav2 abgebrochen (CANCELED).')
-            self.set_parameters([rclpy.parameter.Parameter('explore_cancelled', rclpy.Parameter.Type.BOOL, True)])
         else:
             goal_handle.abort()
             self.get_logger().warn(f'Zielstatus unerwartet: {status} – wird als ABORTED behandelt.')

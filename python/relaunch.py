@@ -8,11 +8,16 @@ from nav_msgs.msg import OccupancyGrid
 import subprocess
 import time
 from threading import Thread
+import sys
+import os
 
 
 class ExploreRelauncher(Node):
     def __init__(self):
         super().__init__('explore_relauncher')
+
+        self.map_name = sys.argv[1]
+        print(f"[INFO] Received map name: {self.map_name}")
 
         self.last_frontier_time = time.time()
         self.last_map_change_time = time.time()
@@ -24,7 +29,7 @@ class ExploreRelauncher(Node):
         self.frontier_timeout = 12  # seconds
         self.map_change_timeout = 30  # seconds
         self.check_interval = 5  # seconds
-        self.max_restarts_without_progress = 3
+        self.max_restarts_without_progress = 2
         self.monitor_after_restart_delay = 20  # seconds after restart to evaluate
 
         self.frontiers_exist = False
@@ -34,9 +39,6 @@ class ExploreRelauncher(Node):
         self.create_subscription(MarkerArray, '/explore/frontiers', self.frontier_cb, 10)
         self.create_subscription(OccupancyGrid, '/map', self.map_cb, 10)
         self.create_timer(self.check_interval, self.check_conditions)
-
-        self.declare_parameter('explore_cancelled', False)
-        self.add_on_set_parameters_callback(self.parameter_callback)
 
         self.explore_process = None
         self.explore_monitor_thread = None
@@ -68,20 +70,32 @@ class ExploreRelauncher(Node):
             print(f"[RESTART] Triggered. Count: {self.restarts_without_progress}")
 
             if self.restarts_without_progress >= self.max_restarts_without_progress:
-                print("\n🎉 DONE! No progress after multiple restarts. Shutting down. 🎉🎉🎉")
+                print("\n🎉 DONE! No progress after multiple restarts. Saving map & shutting down... 🎉🎉🎉")
+
                 self.destroy_explore()
-                rclpy.shutdown()
+
+                # Speicherordner vorbereiten
+                map_folder = f"/home/robi/ws_lidar/src/ros2-lidar-explorer/maps/{self.map_name}"
+                os.makedirs(map_folder, exist_ok=True)
+
+                # Dateipfad für map_saver_cli (map.yaml + map.pgm)
+                map_save_path = os.path.join(map_folder, "map")
+                print(f"[SAVE] Saving map to: {map_save_path}")
+
+                try:
+                    subprocess.run([
+                        'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
+                        '-f', map_save_path
+                    ], check=True)
+                    print("[SAVE] Map saved successfully.")
+                except subprocess.CalledProcessError as e:
+                    print(f"[SAVE ERROR] Failed to save map: {e}")
+
+                if rclpy.ok():
+                    rclpy.shutdown()
                 return
 
             self.restart_explore()
-
-    def parameter_callback(self, params):
-        for param in params:
-            if param.name == 'explore_cancelled' and param.value is True:
-                print("[RESTART] Cancel detected via parameter callback. Relaunching explore immediately.")
-                self.set_parameters([Parameter('explore_cancelled', Parameter.Type.BOOL, False)])
-                self.restart_explore()
-        return rclpy.parameter.ParameterEventDescriptors()
 
     def monitor_after_restart(self):
         time.sleep(self.monitor_after_restart_delay)
@@ -122,7 +136,7 @@ class ExploreRelauncher(Node):
                 print("[MONITOR] Connected to Nav2 detected.")
                 monitor = Thread(target=self.monitor_after_restart, daemon=True)
                 monitor.start()
-                break  # Only trigger monitor once per restart
+                break
 
     def restart_explore(self):
         print("[RESTART] Restarting explore_lite process...")
@@ -143,7 +157,8 @@ def main():
     node = ExploreRelauncher()
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
