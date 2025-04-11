@@ -7,10 +7,8 @@ import json
 import requests
 from math import cos, sin, pi
 from urllib.parse import quote
-from collections import deque
 import sys
 import threading
-import time
 
 ESP_IP = sys.argv[1]
 
@@ -19,6 +17,7 @@ class ESPHttpControl(Node):
         super().__init__('esp_http_control')
         self.session = requests.Session()
 
+        # Subscribe to the velocity command topic to control the robot
         self.velocity_topic = "/cmd_vel"
         self.vel_subscriber = self.create_subscription(
             Twist,
@@ -27,23 +26,27 @@ class ESPHttpControl(Node):
             10
         )
 
+        # Publisher for odometry
         self.odom_publisher = self.create_publisher(Odometry, '/odom', 10)
         self.tf_broadcaster = TransformBroadcaster(self)
 
-        self.wheel_offset_x = 0.174
-        self.wheel_radius = 0.037
+        # Wheel parameters
+        self.wheel_offset_x = 0.174     #Don't measure these; just experiment until it matches your robot in RVIZ
+        self.wheel_radius = 0.037       #Don't measure these; just experiment until it matches your robot in RVIZ
         self.TICKS_PER_REV_LEFT = 23
         self.TICKS_PER_REV_RIGHT = 23
 
         self.last_command_time = self.get_clock().now()
         self.cmd_timeout = 0.5
 
+        # Robot's current position and velocity
         self.x = 0.0
         self.y = 0.0
         self.theta = 0.0
         self.linear_x = 0.0
         self.angular_z = 0.0
 
+        # Encoder data (initially fetched from the ESP)
         self.encoder_left, self.encoder_right = self.fetch_encoder_data()
         if self.encoder_left is None or self.encoder_right is None:
             self.encoder_left, self.encoder_right = 0, 0
@@ -51,10 +54,12 @@ class ESPHttpControl(Node):
         self.last_encoder_left = self.encoder_left
         self.last_encoder_right = self.encoder_right
 
+        # Timers for updating odometry and publishing frequent odometry
         self.create_timer(0.1, self.update_odom)
         self.create_timer(0.08, self.publish_frequent_odometry)
 
     def fetch_encoder_data(self):
+        """Fetch encoder data from the ESP via HTTP."""
         try:
             command = json.dumps({"T": 1001})
             url = f"http://{ESP_IP}/js?json={quote(command, safe='{}:,')}"
@@ -74,12 +79,14 @@ class ESPHttpControl(Node):
             return None, None
 
     def update_odom(self):
+        """Update the robot's odometry based on the encoder values."""
         odom_time = self.get_clock().now()
 
         new_encoder_left, new_encoder_right = self.fetch_encoder_data()
         if new_encoder_left is None or new_encoder_right is None:
             return
 
+        # Calculate distances based on encoder values
         left_distance = (new_encoder_left - self.last_encoder_left) / self.TICKS_PER_REV_LEFT * (2 * pi * self.wheel_radius)
         right_distance = (new_encoder_right - self.last_encoder_right) / self.TICKS_PER_REV_RIGHT * (2 * pi * self.wheel_radius)
         avg_distance = (left_distance + right_distance) / 2.0
@@ -88,24 +95,27 @@ class ESPHttpControl(Node):
         if abs(delta_theta) < 0.01:
             delta_theta = 0.0
 
+        # Update robot's orientation and position
         self.theta = (self.theta + delta_theta + pi) % (2 * pi) - pi
-
         if abs(delta_theta) > 0.01:
             self.x += avg_distance * cos(self.theta)
             self.y += avg_distance * sin(self.theta)
         else:
             self.x += avg_distance
 
+        # Save current encoder values for the next update
         self.last_encoder_left = new_encoder_left
         self.last_encoder_right = new_encoder_right
 
         self.last_odom_time = odom_time
 
     def publish_frequent_odometry(self):
+        """Publish odometry and send transform at a high frequency."""
         self.publish_odometry()
         self.send_tf_transform()
 
     def publish_odometry(self):
+        """Publish the current odometry information."""
         odom = Odometry()
         odom.header.stamp = self.get_clock().now().to_msg()
         odom.header.frame_id = 'odom'
@@ -117,6 +127,7 @@ class ESPHttpControl(Node):
         self.odom_publisher.publish(odom)
 
     def send_tf_transform(self):
+        """Send the robot's transform (position and orientation) to TF."""
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'odom'
@@ -128,17 +139,19 @@ class ESPHttpControl(Node):
         self.tf_broadcaster.sendTransform(t)
 
     def cmd_vel_callback(self, msg: Twist):
+        """Callback to receive velocity commands and process them."""
         self.linear_x = msg.linear.x
         self.angular_z = msg.angular.z
 
+        # Adjust commands for more stable motion
         if abs(self.angular_z) > abs(self.linear_x) and abs(self.angular_z) < 0.2:
-            self.angular_z = 0.4 * (1 if self.angular_z > 0 else -1)
+            self.angular_z = 0.3 * (1 if self.angular_z > 0 else -1)
             self.linear_x = 0.0
         else:
             if 0 < self.linear_x < 0.1:
-                self.linear_x = 0.1
+                self.linear_x = 0.08
             elif -0.1 < self.linear_x < 0:
-                self.linear_x = -0.1
+                self.linear_x = -0.08
             if -0.05 < self.angular_z < 0.05:
                 self.angular_z = 0.0
 
@@ -149,10 +162,12 @@ class ESPHttpControl(Node):
             self.send_command_timer = self.create_timer(0.1, self.send_continuous_command)
 
     def send_continuous_command(self):
+        """Send motor commands periodically while the robot is active."""
         if (self.get_clock().now() - self.last_command_time).nanoseconds / 1e9 < 0.5:
             self.send_motor_command(self.linear_x, self.angular_z)
 
     def send_motor_command(self, linear_x, angular_z):
+        """Send motor control commands to the ESP."""
         scaling_factor_circle = 0.18
         linear_x_scaled = linear_x
         angular_z_scaled = angular_z * scaling_factor_circle
@@ -171,6 +186,7 @@ class ESPHttpControl(Node):
             self.get_logger().error(f"Motor command error: {e}")
 
 def main():
+    """Main function to initialize the node and start ROS 2 spinning."""
     rclpy.init()
     node = ESPHttpControl()
     rclpy.spin(node)

@@ -58,7 +58,6 @@ bt_navigator:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
     # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
-  
     # plugin_lib_names is used to add custom BT plugins to the executor (vector of strings).
     # Built-in plugins are added automatically
     # plugin_lib_names: []
@@ -84,7 +83,7 @@ controller_server:
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
-      movement_time_allowance: 10.0
+      movement_time_allowance: 20.0
     # Goal checker parameters
     #precise_goal_checker:
     #  plugin: "nav2_controller::SimpleGoalChecker"
@@ -111,6 +110,7 @@ controller_server:
       vx_max: 0.5
       vx_min: -0.35
       vy_max: 0.0
+      vy_min: 0.0
       wz_max: 1.9
       iteration_count: 1
       prune_distance: 1.7
@@ -151,8 +151,8 @@ controller_server:
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.81
-        critical_cost: 300.0
+        cost_weight: 8.0
+        critical_cost: 150.0
         consider_footprint: true
         collision_cost: 1000000.0
         near_goal_distance: 1.0
@@ -195,17 +195,18 @@ local_costmap:
       rolling_window: true
       width: 3
       height: 3
-      resolution: 0.05
-      robot_radius: 0.22
+      resolution: 0.03
+      footprint: "[[0.4, 0.15], [0.4, -0.15], [-0.1, -0.15], [-0.1, 0.15]]"
+      # robot_radius: 0.27
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.70
+        cost_scaling_factor: 2.0
+        inflation_radius: 0.35
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
+        enabled: true
+        publish_voxel_map: true
         origin_z: 0.0
         z_resolution: 0.05
         z_voxels: 16
@@ -215,8 +216,8 @@ local_costmap:
         scan:
           topic: /scan
           max_obstacle_height: 2.0
-          clearing: True
-          marking: True
+          clearing: true
+          marking: true
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
@@ -225,8 +226,8 @@ local_costmap:
       static_layer:
         enabled: false
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: True
-      always_send_full_costmap: True
+        map_subscribe_transient_local: true
+      always_send_full_costmap: true
 
 global_costmap:
   global_costmap:
@@ -235,19 +236,20 @@ global_costmap:
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
-      robot_radius: 0.22
-      resolution: 0.05
+      resolution: 0.03
       track_unknown_space: true
+      footprint: "[[0.4, 0.15], [0.4, -0.15], [-0.1, -0.15], [-0.1, 0.15]]"
+      # robot_radius: 0.27
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        enabled: true
         observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
-          clearing: True
-          marking: True
+          clearing: true
+          marking: true
           data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
@@ -256,12 +258,12 @@ global_costmap:
       static_layer:
         enabled: false
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: True
+        map_subscribe_transient_local: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.7
-      always_send_full_costmap: True
+        cost_scaling_factor: 2.0
+        inflation_radius: 0.35
+      always_send_full_costmap: true
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
 # If you'd rather set it in the yaml, remove the default "map" value in the tb3_simulation_launch.py
@@ -360,16 +362,15 @@ collision_monitor:
     source_timeout: 1.0
     base_shift_correction: True
     stop_pub_timeout: 2.0
-    # Polygons represent zone around the robot for "stop", "slowdown" and "limit" action types,
-    # and robot footprint for "approach" action type.
+    # Polygons represent zone around the robot for "stop", "slowdown" and "limit" acti>    # and robot footprint for "approach" action type.
     polygons: ["FootprintApproach"]
     FootprintApproach:
       type: "polygon"
       action_type: "approach"
       footprint_topic: "/local_costmap/published_footprint"
-      time_before_collision: 2.0
-      simulation_time_step: 0.2
-      min_points: 6
+      time_before_collision: 1.0
+      simulation_time_step: 0.05
+      min_points: 4
       visualize: False
       enabled: True
     observation_sources: ["scan"]
