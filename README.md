@@ -146,13 +146,13 @@ Node(
 )
 ```
 
-#### ✍️ 3. Edit the Startup File
+#### ✍️ 3. Edit the Mapping File
 
-If you’re using a different model than the A2M8, make sure to update your startup script accordingly:
+If you’re using a different model than the A2M8, make sure to update your mapping script accordingly:
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
-sudo nano startup.sh
+sudo nano mapping.sh
 ```
 
 Look for this line:
@@ -323,5 +323,5 @@ Once everything is set up, follow these steps to launch mapping.
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
-./startup.sh IP_ADRESS_OF_YOUR_ESP
+./mapping.sh IP_ADRESS_OF_YOUR_ESP
 ```
