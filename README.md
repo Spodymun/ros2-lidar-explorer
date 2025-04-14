@@ -270,6 +270,90 @@ If you're still running into unexplained Nav2 crashes or TF timeout issues, I **
 - Timing of your sensor data publication
 
 ---
+# RealSense D415 + ROS 2 Jazzy + RViz2 Integration
+
+This guide shows how to get a **working RGB image + pointcloud stream** from your Intel® RealSense™ D415 in **RViz2** 
+
+## 🔧 Step-by-Step Setup
+
+### 1. Install librealsense
+
+```bash
+cd ~
+git clone https://github.com/IntelRealSense/librealsense.git
+cd librealsense
+git checkout v2.56.1  # or higher
+
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+sudo make install
+```
+
+### 2. Prepare ROS 2 workspace
+
+```bash
+cd ~/ws_lidar/src
+git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
+```
+### 3. Install dependencies
+
+```bash
+cd ~/ws_lidar
+sudo apt update
+rosdep install --from-paths src --ignore-src -r -y
+```
+### 4. Fix build issue
+
+> The `rotation_filter` is no longer supported in librealsense ≥ 2.56. You must comment it out.
+
+```bash
+sudo nano ~/ws_lidar/src/realsense-ros/realsense2_camera/src/base_realsense_node.cpp
+```
+
+- Go to line **232** and comment out:
+  ```cpp
+  // filters.push_back(std::make_shared<NamedFilter>(std::make_shared<rs2::rotation_filter>(...)));
+  ```
+
+Save and close.
+
+### 5. Build the workspace
+
+```bash
+cd ~/ws_lidar
+colcon build --symlink-install
+source install/setup.bash
+```
+
+> ⚠️ If the build fails, fix the errors or retry `colcon build` after cleanup.
+
+## 🚀 Launch & Visualization
+
+### 1. Start the RealSense D415
+
+```bash
+ros2 launch ros2-lidar-explorer d415.launch.py 
+```
+
+### 2. Open RViz2 in another terminal
+
+```bash
+rviz2
+```
+
+### 3. RViz Configuration
+
+- **Fixed Frame**:  
+  `/camera_depth_optical_frame`
+
+- **Add Display → Image**  
+  - Topic: `/camera/camera/color/image_raw`
+
+- **Add Display → PointCloud2**  
+  - Topic: `/camera/camera/depth/color/points`
+
+---
 
 # Matching Your System
 
