@@ -12,11 +12,11 @@ class MoveRobot(Node):
     def move_for_seconds(self):
         """Moves the robot for a specified duration in seconds."""
         twist = Twist()
-        twist.linear.x = 0.1  # Move forward at a constant speed
-        # twist.angular.z = 0.3 # Uncomment this for circular motion
+        #twist.linear.x = 0.1  # Move forward at a constant speed
+        twist.angular.z = 1.0 # Uncomment this for circular motion
 
         # Duration of movement
-        duration_active = 10
+        duration_active = 1000000000
 
         self.get_logger().info(f"🚀 Moving the robot for {duration_active} seconds...")
 

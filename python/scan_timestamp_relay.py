@@ -26,8 +26,8 @@ class ScanTimestampRelay(Node):
 
     def callback(self, msg):
         """Callback function to adjust the timestamp of the received LaserScan message."""
-        # Adjust the timestamp by subtracting 0.1 seconds from the current time
-        adjusted_time = self.get_clock().now() - Duration(seconds=0.1)
+        # Adjust the timestamp by adding 0.1 seconds from the current time
+        adjusted_time = self.get_clock().now() - Duration(seconds=0.05)
         msg.header.stamp = adjusted_time.to_msg()
         
         # Publish the modified LaserScan message

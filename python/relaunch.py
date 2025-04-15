@@ -74,7 +74,12 @@ class ExploreRelauncher(Node):
         if not frontier_timed_out or not map_stagnant:
             if self.restarts_without_progress > 0:
                 self.get_logger().info("Progress detected – resetting restart counter.")
-            self.restarts_without_progress = 0
+            
+            if map_stagnant:
+                self.get_logger().info("Map still stagnant despite progress – setting restart counter to 1.")
+                self.restarts_without_progress = 1
+            else:
+                self.restarts_without_progress = 0
 
         if not recently_restarted and frontier_timed_out and map_stagnant:
             self.restarts_without_progress += 1
@@ -168,19 +173,24 @@ class ExploreRelauncher(Node):
         self.get_logger().info("Attempting to send robot back to (0, 0)...")
 
         attempt = 1
-        while True:
+        while rclpy.ok():
             try:
                 result = subprocess.run([
                     'ros2', 'action', 'send_goal', '/explore/navigate_to_pose',
                     'nav2_msgs/action/NavigateToPose',
-                    '{pose: {header: {frame_id: "map"}, pose: {position {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}',
+                    '{pose: {header: {frame_id: "map"}, pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}',
                 ], capture_output=True, text=True)
 
                 if result.returncode == 0:
-               	    self.get_logger().info("Robot has successfully returned to (0, 0).")
-                    return
+                    output = result.stdout
+                    if "Goal reached" in output or "SUCCEEDED" in output:
+                        self.get_logger().info("Robot has successfully reached (0, 0).")
+                        rclpy.shutdown()
+                        return
+                    else:
+                        self.get_logger().warn(f"[Attempt {attempt}] Goal sent but not reached. Output:\n{output}")
                 else:
-                    self.get_logger().warn(f"[Attempt {attempt}] Navigation failed: {result.stderr.strip()}")
+                    self.get_logger().warn(f"[Attempt {attempt}] Navigation command failed:\n{result.stderr.strip()}")
 
             except Exception as e:
                 self.get_logger().error(f"Exception during navigation: {str(e)}")

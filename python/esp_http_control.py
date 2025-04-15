@@ -143,17 +143,23 @@ class ESPHttpControl(Node):
         self.linear_x = msg.linear.x
         self.angular_z = msg.angular.z
 
-        # Adjust commands for more stable motion
-        if abs(self.angular_z) > abs(self.linear_x) and abs(self.angular_z) < 0.2:
-            self.angular_z = 0.3 * (1 if self.angular_z > 0 else -1)
-            self.linear_x = 0.0
+        if abs(self.linear_x) > 0.0178:
+            self.angular_z = 0.0
         else:
-            if 0 < self.linear_x < 0.1:
-                self.linear_x = 0.08
-            elif -0.1 < self.linear_x < 0:
-                self.linear_x = -0.08
-            if -0.05 < self.angular_z < 0.05:
-                self.angular_z = 0.0
+            self.linear_x = 0.0 
+
+       # Adjust small velocity commands to ensure movement
+        if 0 < abs(self.linear_x) < 0.1:
+            self.linear_x = 0.1 if self.linear_x > 0 else -0.1
+
+        if abs(self.linear_x) > 0.3:
+            self.linear_x = 0.3 if self.linear_x > 0 else -0.3
+
+        if 0 < abs(self.angular_z) < 0.4:
+            self.angular_z = 0.4 if self.angular_z > 0 else -0.4
+
+        if abs(self.angular_z) > 0.8:
+            self.angular_z = 0.8 if self.angular_z > 0 else -0.
 
         threading.Thread(target=self.send_motor_command, args=(self.linear_x, self.angular_z), daemon=True).start()
         self.last_command_time = self.get_clock().now()
