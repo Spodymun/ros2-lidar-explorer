@@ -111,13 +111,14 @@ class ESPHttpControl(Node):
 
     def publish_frequent_odometry(self):
         """Publish odometry and send transform at a high frequency."""
-        self.publish_odometry()
-        self.send_tf_transform()
+        timestamp = self.get_clock().now().to_msg()
+        self.publish_odometry(timestamp)
+        self.send_tf_transform(timestamp)
 
-    def publish_odometry(self):
+    def publish_odometry(self, timestamp):
         """Publish the current odometry information."""
         odom = Odometry()
-        odom.header.stamp = self.get_clock().now().to_msg()
+        odom.header.stamp = timestamp
         odom.header.frame_id = 'odom'
         odom.child_frame_id = 'base_link'
         odom.pose.pose.position.x = self.x
@@ -126,10 +127,10 @@ class ESPHttpControl(Node):
         odom.pose.pose.orientation.w = cos(self.theta / 2)
         self.odom_publisher.publish(odom)
 
-    def send_tf_transform(self):
+    def send_tf_transform(self, timestamp):
         """Send the robot's transform (position and orientation) to TF."""
         t = TransformStamped()
-        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.stamp = timestamp
         t.header.frame_id = 'odom'
         t.child_frame_id = 'base_link'
         t.transform.translation.x = self.x
@@ -143,20 +144,20 @@ class ESPHttpControl(Node):
         self.linear_x = msg.linear.x
         self.angular_z = msg.angular.z
 
-        if abs(self.linear_x) > 0.0178:
+        if abs(self.linear_x) > 0.017:
             self.angular_z = 0.0
         else:
             self.linear_x = 0.0 
 
        # Adjust small velocity commands to ensure movement
-        if 0 < abs(self.linear_x) < 0.1:
-            self.linear_x = 0.1 if self.linear_x > 0 else -0.1
+        if 0 < abs(self.linear_x) < 0.07:
+            self.linear_x = 0.07 if self.linear_x > 0 else -0.07
 
         if abs(self.linear_x) > 0.3:
             self.linear_x = 0.3 if self.linear_x > 0 else -0.3
 
-        if 0 < abs(self.angular_z) < 0.4:
-            self.angular_z = 0.4 if self.angular_z > 0 else -0.4
+        if 0 < abs(self.angular_z) < 0.25:
+            self.angular_z = 0.25 if self.angular_z > 0 else -0.25
 
         if abs(self.angular_z) > 0.8:
             self.angular_z = 0.8 if self.angular_z > 0 else -0.

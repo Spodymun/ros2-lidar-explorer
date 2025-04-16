@@ -28,15 +28,15 @@ sleep 3
 ros2 launch sllidar_ros2 sllidar_a2m8_launch.py &
 bg_pid2=$!
 
-until ros2 topic echo /scan_raw --once; do
-  echo "Waiting for /scan_raw..."
-  sleep 1
-done
-echo "✅ /scan_raw detected"
+# until ros2 topic echo /scan_raw --once; do
+#   echo "Waiting for /scan_raw..."
+#   sleep 1
+# done
+# echo "✅ /scan_raw detected"
 
 cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 scan_timestamp_relay.py &
-bg_pid10=$!
+# python3 scan_timestamp_relay.py &
+# bg_pid10=$!
 
 until ros2 topic echo /scan --once; do
   echo "Waiting for /scan..."

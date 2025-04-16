@@ -6,6 +6,8 @@ from rclpy.time import Duration
 from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import PoseStamped
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
+from std_msgs.msg import Bool
+from std_msgs.msg import Int8
 
 class NavigateRelay(Node):
     def __init__(self):
@@ -26,6 +28,10 @@ class NavigateRelay(Node):
 
         # Action client to forward goals to the main Nav2 NavigateToPose server
         self.nav2_client = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+
+        # Publisher for goal status
+        self.goal_status_pub = self.create_publisher(Bool, '/explore/goal_status', 10)
+        self.goal_result_pub = self.create_publisher(Int8, '/explore/goal_result_status', 10)
 
         # State tracking
         self.goal_active = False
@@ -49,6 +55,7 @@ class NavigateRelay(Node):
                 True
             )
         ])
+        self.goal_status_pub.publish(Bool(data=False))  # also signal goal not active
         return CancelResponse.ACCEPT
 
     async def execute_callback(self, goal_handle):
@@ -56,26 +63,28 @@ class NavigateRelay(Node):
         if not self.nav2_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error('Nav2 action server not available.')
             goal_handle.abort()
+            self.goal_status_pub.publish(Bool(data=False))
             return NavigateToPose.Result()
 
         now = self.get_clock().now()
 
-        # Prevent rapid re-submission of goals if one is active and time hasn't passed
         if self.goal_active and now - self.last_goal_time < self.min_execution_duration:
             self.get_logger().warn('Too soon for a new goal – skipping.')
             goal_handle.abort()
+            self.goal_status_pub.publish(Bool(data=False))
             return NavigateToPose.Result()
 
         self.goal_active = True
         self.last_goal_time = now
 
-        # Forward goal to Nav2
         nav2_goal = NavigateToPose.Goal()
         nav2_goal.pose = goal_handle.request.pose
 
         self.get_logger().info(
             f'Forwarding goal to Nav2: x={nav2_goal.pose.pose.position.x:.2f}, y={nav2_goal.pose.pose.position.y:.2f}'
         )
+
+        self.goal_status_pub.publish(Bool(data=True))  # 🟢 GOAL ACTIVE
 
         nav2_future = self.nav2_client.send_goal_async(nav2_goal)
         nav2_goal_handle = await nav2_future
@@ -84,9 +93,9 @@ class NavigateRelay(Node):
             self.get_logger().warn('Nav2 rejected the goal.')
             goal_handle.abort()
             self.goal_active = False
+            self.goal_status_pub.publish(Bool(data=False))
             return NavigateToPose.Result()
 
-        # Wait for the goal to complete
         result_future = nav2_goal_handle.get_result_async()
         await result_future
 
@@ -94,18 +103,22 @@ class NavigateRelay(Node):
         status = result_future.result().status
 
         self.goal_active = False
+        self.goal_status_pub.publish(Bool(data=False))  # 🔴 GOAL DONE
 
-        # Handle final status
         if status == 4:  # ABORTED
+            self.goal_result_pub.publish(Int8(data=status))
             goal_handle.abort()
             self.get_logger().warn('Goal was aborted by Nav2.')
         elif status == 3:  # SUCCEEDED
+            self.goal_result_pub.publish(Int8(data=status))
             goal_handle.succeed()
             self.get_logger().info('Goal successfully reached.')
         elif status == 2:  # CANCELED
+            self.goal_result_pub.publish(Int8(data=status))
             goal_handle.canceled()
             self.get_logger().warn('Goal was canceled.')
         else:
+            self.goal_result_pub.publish(Int8(data=status))
             goal_handle.abort()
             self.get_logger().warn(f'Unexpected goal status: {status} – treating as aborted.')
 

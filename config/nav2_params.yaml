@@ -9,11 +9,11 @@ amcl:
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
-    do_beamskip: false
+    do_beamskip: true
     global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
-    laser_max_range: 100.0
+    laser_max_range: 12.0
     laser_min_range: -1.0
     laser_model_type: "likelihood_field"
     max_beams: 60
@@ -196,13 +196,13 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.03
-      footprint: "[[0.2, 0.14], [0.2, -0.14], [-0.2, -0.14], [-0.2, 0.14]]"
+      footprint: "[[0.2, 0.105], [0.2, -0.105], [-0.2, -0.105], [-0.2, 0.105]]"
       # robot_radius: 0.27
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 1.5
-        inflation_radius: 0.24
+        inflation_radius: 0.2
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: true
@@ -238,7 +238,7 @@ global_costmap:
       robot_base_frame: base_link
       resolution: 0.03
       track_unknown_space: true
-      footprint: "[[0.2, 0.14], [0.2, -0.14], [-0.2, -0.14], [-0.2, 0.14]]"
+      footprint: "[[0.2, 0.105], [0.2, -0.105], [-0.2, -0.105], [-0.2, 0.105]]"
       # robot_radius: 0.27
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -262,7 +262,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 1.5
-        inflation_radius: 0.24
+        inflation_radius: 0.2
       always_send_full_costmap: true
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
@@ -368,7 +368,7 @@ collision_monitor:
       type: "polygon"
       action_type: "approach"
       footprint_topic: "/local_costmap/published_footprint"
-      time_before_collision: 3.0
+      time_before_collision: 2.5
       simulation_time_step: 0.05
       min_points: 4
       visualize: False
