@@ -51,6 +51,14 @@ Follow this guide to set up a workspace:
   cd ~/ws_lidar/src
   git clone https://github.com/Spodymun/ros2-lidar-explorer
   ```
+#### 🔁 Automatically Source ROS and Workspace on Every Shell Start
+
+To avoid manually sourcing after each new terminal session or build, add the following lines to your `~/.bashrc`:
+
+```bash
+grep -qxF 'source /opt/ros/jazzy/setup.bash' ~/.bashrc || echo 'source /opt/ros/jazzy/setup.bash' >> ~/.bashrc
+grep -qxF 'source ~/ws_lidar/install/setup.bash' ~/.bashrc || echo 'source ~/ws_lidar/install/setup.bash' >> ~/.bashrc
+```
 
 #### 📦 Essential Packages  
 Run the following command to install the necessary ROS 2 packages:
@@ -228,6 +236,45 @@ Once the changes are complete, build your ROS 2 workspace to apply them:
 cd ~/ws_lidar
 colcon build --symlink-install
 ```
+
+> ⚠️ **Warning**
+>
+> If this crashes due to OpenCV issues **and** OpenCV is already installed,
+> try the following *(happened to me after switching to Jetson)*:
+>
+> ## 🛠️ Step 1: Create the Bash Script
+> Save the following script as `link_opencv_libs.bash`:
+> ```bash
+> for f in /opt/opencv-4.8.0/lib/libopencv_*.so.4.8.0; do
+>   sudo ln -sf "$f" /usr/lib/$(basename "$f")
+> done
+> ```
+>
+> ## ▶️ Step 2: Make the Script Executable
+> ```bash
+> chmod +x link_opencv_libs.bash
+> ```
+>
+> ## 🚀 Step 3: Run the Script
+> ```bash
+> ./link_opencv_libs.bash
+> ```
+>
+> ## 🧹 Step 4: Clean CMake and ROS Build Directories
+> Make sure you are back in your Workspace
+> ```bash
+> rm -rf build/ install/ log/
+> ```
+>
+> ## 🔁 Step 5: Rebuild ROS 2 Package
+> ```bash
+> colcon build
+> ```
+>
+> ## ➕ Additionally:
+> ```bash
+> grep -qxF 'export LD_LIBRARY_PATH=/opt/opencv-4.8.0/lib:$LD_LIBRARY_PATH' ~/.bashrc || echo 'export LD_LIBRARY_PATH=/opt/opencv-4.8.0/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+> ```
 ---
 
 ## 🛠️ Troubleshooting: TF Transformation Delays & Nav2 Shutdowns
@@ -326,36 +373,6 @@ cd ~/ws_lidar
 colcon build --symlink-install
 source install/setup.bash
 ```
-
-> ⚠️ If the build fails, fix the errors or retry `colcon build` after cleanup.
-
-## 🚀 Launch & Visualization
-
-> ⚠️ Don’t do this if you are using a Pi!!! I’m serious, mine did nearly explode.
-
-### 1. Start the RealSense D415
-
-```bash
-ros2 launch ros2-lidar-explorer d415.launch.py 
-```
-
-### 2. Open RViz2 in another terminal
-
-```bash
-rviz2
-```
-
-### 3. RViz Configuration
-
-- **Fixed Frame**:  
-  `/camera_depth_optical_frame`
-
-- **Add Display → Image**  
-  - Topic: `/camera/camera/color/image_raw`
-
-- **Add Display → PointCloud2**  
-  - Topic: `/camera/camera/depth/color/points`
-
 ---
 
 # Matching Your System
@@ -411,6 +428,8 @@ Once the device is connected to the hotspot, you can locate the IP address of yo
 > ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
 
 Once everything is set up, follow these steps to launch mapping.  
+
+> ⚠️ **Make sure you deactivate the camera launch if your system can't provide enough GPU acceleration**  
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
