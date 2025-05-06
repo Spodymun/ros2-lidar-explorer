@@ -228,15 +228,6 @@ Once the changes are complete, build your ROS 2 workspace to apply them:
 cd ~/ws_lidar
 colcon build --symlink-install
 ```
-
-#### ⚠️ Warning: Build Issues on Jetson
-
-I had build failures in the `map_merge` folder from **m-explore-ros2** on my Jetson. If you hit the same issue, you can safely delete it and then rebuild:
-
-```bash
-rm -rf ~/ws_lidar/src/m-explore-ros2/map_merge
-colcon build --symlink-install
-```
 ---
 
 ## 🛠️ Troubleshooting: TF Transformation Delays & Nav2 Shutdowns
