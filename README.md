@@ -26,9 +26,11 @@ By cloning this repository, you'll be able to:
 ## Hardware Requirements 🔧  
 
 - **UGV Platform:** Waveshare UGV02  
-- **Compute:** Raspberry Pi 5 + Active Cooler  
+- **Compute:** Raspberry Pi 5 + Active Cooler / Jetson Orin nano
   - Running **Ubuntu Noble (Pro) 24.04**  
-- **LiDAR Sensor:** A2M8 
+- **LiDAR Sensor:** A2M8
+
+I upgraded to a Jetson Orin Nano, so I no longer need some of my real-time settings. However, I’ve documented how to use them and everything you need to set them up.
 
 ---
 
@@ -49,10 +51,6 @@ Follow this guide to set up a workspace:
   cd ~/ws_lidar/src
   git clone https://github.com/Spodymun/ros2-lidar-explorer
   ```
-You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
-Once the device is connected to the hotspot, you can locate the IP address of your ESP.
-
-> ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
 
 #### 📦 Essential Packages  
 Run the following command to install the necessary ROS 2 packages:
@@ -123,6 +121,11 @@ Then make the following manual adjustments in that file:
 
 #### ✅ Update the launch configuration
 
+> **⚠️ WARNING**  
+> You’ll only need the following step if you run into issues with the time frames:  
+> 1. Copy `scan_timestamp_relay.py` from the `archives/` folder into the `python/` folder.  
+> 2. Uncomment its launch command in `mapping.sh` (it’s currently commented out).  
+
 Make sure your node is defined like this in your launch file:
 
 ```python
@@ -144,7 +147,7 @@ Node(
     ],
     output='screen'
 )
-```
+``` 
 
 #### ✍️ 3. Edit the Mapping File
 
@@ -201,18 +204,11 @@ find ~/ws_lidar/src -type f \( -name "*.cpp" -or -name "*.h" -or -name "*.hpp" \
 
 In **ROS 2 Jazzy**, the method `execute_callback()` from `rclcpp::TimerBase` has changed.  
 It now requires an **explicit argument** of type `std::shared_ptr<void>`.  
-To maintain compatibility, update all direct calls as shown below:
+To maintain compatibility, update all direct calls in one go:
 
-```cpp
-map_merging_timer_->execute_callback();
-topic_subscribing_timer_->execute_callback();
-pose_estimation_timer_->execute_callback();
-```
-to:
-```cpp
-map_merging_timer_->execute_callback(nullptr);
-topic_subscribing_timer_->execute_callback(nullptr);
-pose_estimation_timer_->execute_callback(nullptr);
+```bash
+find ~/ws_lidar/src -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print0 \
+  | xargs -0 sed -i -E 's/execute_callback *\(\s*\)/execute_callback(nullptr)/g'
 ```
 #### 🐢 Slower robot = more patience
 
@@ -232,6 +228,15 @@ Once the changes are complete, build your ROS 2 workspace to apply them:
 cd ~/ws_lidar
 colcon build --symlink-install
 ```
+
+#### ⚠️ Warning: Build Issues on Jetson
+
+I had build failures in the `map_merge` folder from **m-explore-ros2** on my Jetson. If you hit the same issue, you can safely delete it and then rebuild:
+
+```bash
+rm -rf ~/ws_lidar/src/m-explore-ros2/map_merge
+colcon build --symlink-install
+```
 ---
 
 ## 🛠️ Troubleshooting: TF Transformation Delays & Nav2 Shutdowns
@@ -245,6 +250,9 @@ To solve this, I took several steps:
 
 1. **Upgraded to Ubuntu Pro** ([Get it here – it's free](https://ubuntu.com/pro/subscribe))  
    Ubuntu Pro allowed me to access better real-time processing capabilities, which significantly **improved the speed of TF frame transformations**.
+
+> **⚠️ WARNING**  
+> This is not available for the Jetson because Ubuntu 24.04 is **not supported** by Nvidia.
 
 2. **Increased TF tolerances in Nav2**  
    I changed **all transform tolerances** in the `nav2_params.yaml` config file to `1.0`.  
@@ -260,8 +268,10 @@ To solve this, I took several steps:
      ```python
      python/scan_timestamp_relay.py
      ```
+> **⚠️ WARNING**  
+> You'll need to add it by yourself
 
-> ⚙️ If you cloned this repo, steps 2 and 3 are **already included**.
+> ⚙️ If you cloned this repo, steps 2 (and 3) are **already included**.
 
 ### 🔄 Still Having Issues?
 
@@ -329,6 +339,8 @@ source install/setup.bash
 > ⚠️ If the build fails, fix the errors or retry `colcon build` after cleanup.
 
 ## 🚀 Launch & Visualization
+
+> ⚠️ Don’t do this if you are using a Pi!!! I’m serious, mine did nearly explode.
 
 ### 1. Start the RealSense D415
 
@@ -402,6 +414,10 @@ rviz2
 ---
    
 # ▶️ Running the Project  
+You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
+Once the device is connected to the hotspot, you can locate the IP address of your ESP.
+
+> ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
 
 Once everything is set up, follow these steps to launch mapping.  
 
@@ -409,3 +425,4 @@ Once everything is set up, follow these steps to launch mapping.
 cd ~/ws_lidar/src/ros2-lidar-explorer
 ./mapping.sh IP_ADRESS_OF_YOUR_ESP
 ```
+
