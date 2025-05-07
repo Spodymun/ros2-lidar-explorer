@@ -187,6 +187,13 @@ source install/setup.bash
 > 💡 If `colcon build` throws an error the first time, just try it again.  
 > Sometimes it resolves itself after a clean rebuild.
 
+> **⚠️**
+> If you run into problems with the LiDAR because it won’t activate, try:
+>
+> ```bash
+> sudo chmod 777 /dev/ttyUSB0
+> ```
+
 Now your RPLidar should be ready to run with the correct configuration! 🎉
 
 ---
