@@ -26,9 +26,11 @@ By cloning this repository, you'll be able to:
 ## Hardware Requirements 🔧  
 
 - **UGV Platform:** Waveshare UGV02  
-- **Compute:** Raspberry Pi 5 + Active Cooler  
+- **Compute:** Raspberry Pi 5 + Active Cooler / Jetson Orin nano
   - Running **Ubuntu Noble (Pro) 24.04**  
-- **LiDAR Sensor:** A2M8 
+- **LiDAR Sensor:** A2M8
+
+I upgraded to a Jetson Orin Nano, so I no longer need some of my real-time settings. However, I’ve documented how to use them and everything you need to set them up.
 
 ---
 
@@ -49,10 +51,14 @@ Follow this guide to set up a workspace:
   cd ~/ws_lidar/src
   git clone https://github.com/Spodymun/ros2-lidar-explorer
   ```
-You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
-Once the device is connected to the hotspot, you can locate the IP address of your ESP.
+#### 🔁 Automatically Source ROS and Workspace on Every Shell Start
 
-> ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
+To avoid manually sourcing after each new terminal session or build, add the following lines to your `~/.bashrc`:
+
+```bash
+grep -qxF 'source /opt/ros/jazzy/setup.bash' ~/.bashrc || echo 'source /opt/ros/jazzy/setup.bash' >> ~/.bashrc
+grep -qxF 'source ~/ws_lidar/install/setup.bash' ~/.bashrc || echo 'source ~/ws_lidar/install/setup.bash' >> ~/.bashrc
+```
 
 #### 📦 Essential Packages  
 Run the following command to install the necessary ROS 2 packages:
@@ -123,6 +129,11 @@ Then make the following manual adjustments in that file:
 
 #### ✅ Update the launch configuration
 
+> **⚠️ WARNING**  
+> You’ll only need the following step if you run into issues with the time frames:  
+> 1. Copy `scan_timestamp_relay.py` from the `archives/` folder into the `python/` folder.  
+> 2. Uncomment its launch command in `mapping.sh` (it’s currently commented out).  
+
 Make sure your node is defined like this in your launch file:
 
 ```python
@@ -144,7 +155,7 @@ Node(
     ],
     output='screen'
 )
-```
+``` 
 
 #### ✍️ 3. Edit the Mapping File
 
@@ -176,6 +187,13 @@ source install/setup.bash
 > 💡 If `colcon build` throws an error the first time, just try it again.  
 > Sometimes it resolves itself after a clean rebuild.
 
+> **⚠️**
+> If you run into problems with the LiDAR because it won’t activate, try:
+>
+> ```bash
+> sudo chmod 777 /dev/ttyUSB0
+> ```
+
 Now your RPLidar should be ready to run with the correct configuration! 🎉
 
 ---
@@ -201,18 +219,11 @@ find ~/ws_lidar/src -type f \( -name "*.cpp" -or -name "*.h" -or -name "*.hpp" \
 
 In **ROS 2 Jazzy**, the method `execute_callback()` from `rclcpp::TimerBase` has changed.  
 It now requires an **explicit argument** of type `std::shared_ptr<void>`.  
-To maintain compatibility, update all direct calls as shown below:
+To maintain compatibility, update all direct calls in one go:
 
-```cpp
-map_merging_timer_->execute_callback();
-topic_subscribing_timer_->execute_callback();
-pose_estimation_timer_->execute_callback();
-```
-to:
-```cpp
-map_merging_timer_->execute_callback(nullptr);
-topic_subscribing_timer_->execute_callback(nullptr);
-pose_estimation_timer_->execute_callback(nullptr);
+```bash
+find ~/ws_lidar/src -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print0 \
+  | xargs -0 sed -i -E 's/execute_callback *\(\s*\)/execute_callback(nullptr)/g'
 ```
 #### 🐢 Slower robot = more patience
 
@@ -232,6 +243,45 @@ Once the changes are complete, build your ROS 2 workspace to apply them:
 cd ~/ws_lidar
 colcon build --symlink-install
 ```
+
+> ⚠️ **Warning**
+>
+> If this crashes due to OpenCV issues **and** OpenCV is already installed,
+> try the following *(happened to me after switching to Jetson)*:
+>
+> ## 🛠️ Step 1: Create the Bash Script
+> Save the following script as `link_opencv_libs.bash`:
+> ```bash
+> for f in /opt/opencv-4.8.0/lib/libopencv_*.so.4.8.0; do
+>   sudo ln -sf "$f" /usr/lib/$(basename "$f")
+> done
+> ```
+>
+> ## ▶️ Step 2: Make the Script Executable
+> ```bash
+> chmod +x link_opencv_libs.bash
+> ```
+>
+> ## 🚀 Step 3: Run the Script
+> ```bash
+> ./link_opencv_libs.bash
+> ```
+>
+> ## 🧹 Step 4: Clean CMake and ROS Build Directories
+> Make sure you are back in your Workspace
+> ```bash
+> rm -rf build/ install/ log/
+> ```
+>
+> ## 🔁 Step 5: Rebuild ROS 2 Package
+> ```bash
+> colcon build
+> ```
+>
+> ## ➕ Additionally:
+> ```bash
+> grep -qxF 'export LD_LIBRARY_PATH=/opt/opencv-4.8.0/lib:$LD_LIBRARY_PATH' ~/.bashrc || echo 'export LD_LIBRARY_PATH=/opt/opencv-4.8.0/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+> ```
 ---
 
 ## 🛠️ Troubleshooting: TF Transformation Delays & Nav2 Shutdowns
@@ -245,6 +295,9 @@ To solve this, I took several steps:
 
 1. **Upgraded to Ubuntu Pro** ([Get it here – it's free](https://ubuntu.com/pro/subscribe))  
    Ubuntu Pro allowed me to access better real-time processing capabilities, which significantly **improved the speed of TF frame transformations**.
+
+> **⚠️ WARNING**  
+> This is not available for the Jetson because Ubuntu 24.04 is **not supported** by Nvidia.
 
 2. **Increased TF tolerances in Nav2**  
    I changed **all transform tolerances** in the `nav2_params.yaml` config file to `1.0`.  
@@ -260,8 +313,10 @@ To solve this, I took several steps:
      ```python
      python/scan_timestamp_relay.py
      ```
+> **⚠️ WARNING**  
+> You'll need to add it by yourself
 
-> ⚙️ If you cloned this repo, steps 2 and 3 are **already included**.
+> ⚙️ If you cloned this repo, steps 2 (and 3) are **already included**.
 
 ### 🔄 Still Having Issues?
 
@@ -325,34 +380,6 @@ cd ~/ws_lidar
 colcon build --symlink-install
 source install/setup.bash
 ```
-
-> ⚠️ If the build fails, fix the errors or retry `colcon build` after cleanup.
-
-## 🚀 Launch & Visualization
-
-### 1. Start the RealSense D415
-
-```bash
-ros2 launch ros2-lidar-explorer d415.launch.py 
-```
-
-### 2. Open RViz2 in another terminal
-
-```bash
-rviz2
-```
-
-### 3. RViz Configuration
-
-- **Fixed Frame**:  
-  `/camera_depth_optical_frame`
-
-- **Add Display → Image**  
-  - Topic: `/camera/camera/color/image_raw`
-
-- **Add Display → PointCloud2**  
-  - Topic: `/camera/camera/depth/color/points`
-
 ---
 
 # Matching Your System
@@ -402,10 +429,17 @@ rviz2
 ---
    
 # ▶️ Running the Project  
+You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
+Once the device is connected to the hotspot, you can locate the IP address of your ESP.
+
+> ⚠️ It's important that the Raspberry Pi and the ESP are connected to the same Wi-Fi network — either via a shared hotspot or by directly connecting to each other's Wi-Fi.
 
 Once everything is set up, follow these steps to launch mapping.  
+
+> ⚠️ **Make sure you deactivate the camera launch if your system can't provide enough GPU acceleration**  
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
 ./mapping.sh IP_ADRESS_OF_YOUR_ESP
 ```
+
