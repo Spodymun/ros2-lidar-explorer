@@ -105,15 +105,15 @@ class NavigateRelay(Node):
         self.goal_active = False
         self.goal_status_pub.publish(Bool(data=False))  # 🔴 GOAL DONE
 
-        if status == 4:  # ABORTED
+        if status == 6:  # ABORTED
             self.goal_result_pub.publish(Int8(data=status))
             goal_handle.abort()
             self.get_logger().warn('Goal was aborted by Nav2.')
-        elif status == 3:  # SUCCEEDED
+        elif status == 4:  # SUCCEEDED
             self.goal_result_pub.publish(Int8(data=status))
             goal_handle.succeed()
             self.get_logger().info('Goal successfully reached.')
-        elif status == 2:  # CANCELED
+        elif status == 5:  # CANCELED
             self.goal_result_pub.publish(Int8(data=status))
             goal_handle.canceled()
             self.get_logger().warn('Goal was canceled.')
