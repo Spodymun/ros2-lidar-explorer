@@ -2,8 +2,9 @@
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, QoSHistoryPolicy
 from visualization_msgs.msg import MarkerArray
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, OccupancyGrid
 from std_msgs.msg import Bool, Int8
 import subprocess
 import time
@@ -11,6 +12,43 @@ import sys
 import os
 import math
 from threading import Thread
+
+
+def wait_for_map_topic(node, topic='/map', timeout=30.0):
+    """Wait for map data to become available on the specified topic."""
+    has_data = False
+
+    def callback(msg):
+        nonlocal has_data
+        has_data = True
+
+    qos = QoSProfile(
+        depth=1,
+        durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+        reliability=QoSReliabilityPolicy.RELIABLE,
+        history=QoSHistoryPolicy.KEEP_LAST,
+    )
+
+    sub = node.create_subscription(OccupancyGrid, topic, callback, qos)
+
+    start_time = node.get_clock().now().seconds_nanoseconds()[0]
+    node.get_logger().info(f"Waiting for map data on '{topic}'...")
+
+    while rclpy.ok():
+        rclpy.spin_once(node, timeout_sec=1.0)
+        current_time = node.get_clock().now().seconds_nanoseconds()[0]
+
+        if has_data:
+            node.get_logger().info(f"Map data received on '{topic}'.")
+            break
+
+        if current_time - start_time > timeout:
+            node.get_logger().error(f"Timeout waiting for map data on '{topic}'.")
+            break
+
+    node.destroy_subscription(sub)
+    return has_data
+
 
 class ExploreRelauncher(Node):
     def __init__(self):
@@ -68,7 +106,6 @@ class ExploreRelauncher(Node):
             dx = self.current_goal_position[0]
             dy = self.current_goal_position[1]
             if math.hypot(dx, dy) <= 0.25 and status_code == 3:
-                # HINWEIS: Terminal nach Shutdown schließen (z.B. mit 'exit' oder Strg+D')
                 self.get_logger().info("Robot has reached home (0,0) within tolerance. Shutting down.")
                 rclpy.shutdown()
                 return
@@ -85,7 +122,7 @@ class ExploreRelauncher(Node):
                 cluster['count'] += 1
                 self.get_logger().info(f"Reached same goal cluster {cluster['pos']} count={cluster['count']}")
                 if cluster['count'] >= self.same_goal_threshold and not self.homing_phase:
-                    self.get_logger().info("Same goal reached 3x. Saving map & sending robot home...")
+                    self.get_logger().info("Same goal reached threshold. Saving map & sending robot home.")
                     self.save_map_and_home()
                 return
         # New cluster
@@ -111,7 +148,7 @@ class ExploreRelauncher(Node):
         self.last_pose = current
 
     def check_conditions(self):
-        # Skip any restart logic once homing has begun
+        # Skip any logic once homing has begun
         if self.homing_phase:
             return
         now = time.time()
@@ -126,34 +163,23 @@ class ExploreRelauncher(Node):
             self.restarts_without_progress += 1
             self.get_logger().info(f"Restart triggered. Count: {self.restarts_without_progress}")
             if self.restarts_without_progress >= self.max_restarts_without_progress:
-                self.get_logger().info("No progress after multiple restarts. Saving map & sending robot home...")
+                self.get_logger().info("No progress after multiple restarts. Saving map & sending robot home.")
                 self.save_map_and_home()
             else:
                 self.restart_explore()
 
-    def save_map_and_home(self):
-        # Enter homing phase, stop further restarts
-        self.homing_phase = True
-        # Cancel periodic checks
-        if hasattr(self, 'timer'):
-            self.timer.cancel()
-        # Stop exploration
+    def restart_explore(self):
+        self.get_logger().info("Restarting explore process.")
         self.destroy_explore()
-        # Save map
-        folder = f"/home/robi/ws_lidar/src/ros2-lidar-explorer/maps/{self.map_name}"
-        os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, "map")
-        self.get_logger().info(f"Saving map to: {path}")
-        try:
-            res = subprocess.run([
-                'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
-                '-f', path
-            ], check=True, capture_output=True, text=True)
-            self.get_logger().info(f"Map saved: {res.stdout}")
-        except subprocess.CalledProcessError as e:
-            self.get_logger().error(f"Map save failed: {e.stderr}")
-        # Send home
-        self.send_robot_home()
+        time.sleep(1)
+        self.last_restart_time = time.time()
+        self.start_explore()
+
+    def destroy_explore(self):
+        if hasattr(self, 'explore_process') and self.explore_process:
+            self.explore_process.terminate()
+            self.explore_process.wait()
+            self.explore_process = None
 
     def start_explore(self):
         # Only start if not in homing phase
@@ -189,35 +215,52 @@ class ExploreRelauncher(Node):
             self.get_logger().info("Movement or frontiers detected. Resetting counter.")
             self.restarts_without_progress = 0
 
-    def restart_explore(self):
-        self.get_logger().info("Restarting explore process...")
-        self.destroy_explore()
-        time.sleep(1)
-        self.last_restart_time = time.time()
-        self.start_explore()
-
-    def destroy_explore(self):
-        if hasattr(self, 'explore_process') and self.explore_process:
-            self.explore_process.terminate()
-            self.explore_process.wait()
-            self.explore_process = None
-
     def send_robot_home(self):
-        self.get_logger().info("Sending robot to home (0,0)...")
+        self.get_logger().info("Sending robot to home (0,0).")
         self.current_goal_position = (0.0, 0.0)
-        # Send goal every 5 seconds until shutdown
         def home_loop():
             while rclpy.ok():
                 try:
-                    subprocess.run([
-                        'ros2', 'action', 'send_goal', '/explore/navigate_to_pose',
+                    res = subprocess.run([
+                        'ros2', 'action', 'send_goal', '/explore/naviate_to_pose',
                         'nav2_msgs/action/NavigateToPose',
-                        '{pose: {header: {frame_id: "map"}, pose: {position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}'
+                        '{pose: {header: {frame_id: "map"}, pose: '
+                        '{position: {x: 0.0, y: 0.0, z: 0.0}, orientation: {w: 1.0}}}}'
                     ], capture_output=True, text=True)
+                    output = (res.stdout or "") + (res.stderr or "")
+                    if 'Goal reached' in output:
+                        self.get_logger().info('Home reached! Shutting down.')
+                        rclpy.shutdown()
+                        return
                 except Exception as e:
                     self.get_logger().error(f"Navigation exception: {e}")
                 time.sleep(5)
         Thread(target=home_loop, daemon=True).start()
+
+    def save_map_and_home(self):
+        self.homing_phase = True
+        if hasattr(self, 'timer'):
+            self.timer.cancel()
+        self.destroy_explore()
+        if not wait_for_map_topic(self, '/map', timeout=30):
+            self.get_logger().error("Aborting: No map data available.")
+            return
+        folder = f"/home/robi/ws_lidar/src/ros2-lidar-explorer/maps/{self.map_name}"
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "map")
+        self.get_logger().info(f"Saving map to: {path}")
+        try:
+            res = subprocess.run([
+                'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
+                '-f', path,
+                '--ros-args', '-p', 'map_subscribe_transient_local:=true'
+            ], check=True, capture_output=True, text=True)
+            self.get_logger().info(f"Map successfully saved:\n{res.stdout}")
+        except subprocess.CalledProcessError as e:
+            self.get_logger().error(f"Error saving map: {e.stderr}")
+            return
+        self.send_robot_home()
+
 
 def main():
     rclpy.init()

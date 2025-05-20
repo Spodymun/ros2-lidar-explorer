@@ -33,7 +33,14 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  DIRECTORY config description launch python
+  DIRECTORY
+    archive
+    config
+    description
+    launch
+    maps
+    python
+    rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

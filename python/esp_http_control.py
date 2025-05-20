@@ -1,3 +1,4 @@
+import sys
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -7,7 +8,6 @@ import json
 import requests
 from math import cos, sin, pi
 from urllib.parse import quote
-import sys
 import threading
 
 ESP_IP = sys.argv[1]

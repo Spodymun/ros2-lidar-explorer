@@ -70,8 +70,8 @@ bg_pid5=$!
 python3 navigate_relay.py &
 bg_pid11=$!
 
-ros2 launch ros2-lidar-explorer d415.launch.py &
-bg_pid12=$!
+# ros2 launch ros2-lidar-explorer d415.launch.py &
+# bg_pid12=$!
 
 sleep 1
 
