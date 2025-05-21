@@ -1,4 +1,3 @@
-import sys
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -8,6 +7,7 @@ import json
 import requests
 from math import cos, sin, pi
 from urllib.parse import quote
+import sys
 import threading
 
 ESP_IP = sys.argv[1]
@@ -32,7 +32,7 @@ class ESPHttpControl(Node):
 
         # Wheel parameters
         self.wheel_offset_x = 0.174     #Don't measure these; just experiment until it matches your robot in RVIZ
-        self.wheel_radius = 0.037       #Don't measure these; just experiment until it matches your robot in RVIZ
+        self.wheel_radius = 0.032       #Don't measure these; just experiment until it matches your robot in RVIZ
         self.TICKS_PER_REV_LEFT = 23
         self.TICKS_PER_REV_RIGHT = 23
 
@@ -156,8 +156,8 @@ class ESPHttpControl(Node):
         if abs(self.linear_x) > 0.3:
             self.linear_x = 0.3 if self.linear_x > 0 else -0.3
 
-        if 0 < abs(self.angular_z) < 0.25:
-            self.angular_z = 0.25 if self.angular_z > 0 else -0.25
+        if 0 < abs(self.angular_z) < 0.2:
+            self.angular_z = 0.2 if self.angular_z > 0 else -0.2
 
         if abs(self.angular_z) > 0.8:
             self.angular_z = 0.8 if self.angular_z > 0 else -0.
@@ -175,7 +175,7 @@ class ESPHttpControl(Node):
 
     def send_motor_command(self, linear_x, angular_z):
         """Send motor control commands to the ESP."""
-        scaling_factor_circle = 0.18
+        scaling_factor_circle = 0.3
         linear_x_scaled = linear_x
         angular_z_scaled = angular_z * scaling_factor_circle
 

@@ -41,7 +41,39 @@ gnome-terminal -- bash -c "\
   ros2 launch nav2_bringup localization_launch.py \
     map:=$MAP_YAML \
     params_file:=$HOME/ws_lidar/src/ros2-lidar-explorer/config/amcl_params.yaml \
-    use_sim_time:=False; \
+    use_sim_time:=False \
+    initial_pose_x:=0 \
+    initial_pose_y:=0 \
+    initial_pose_a:=0; \  
   exec bash"
+
+sleep 5
+
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
+'{"linear":{"x":0.0,"y":0.0,"z":0.0},"angular":{"x":0.0,"y":0.0,"z":0.1}}' \
+--once
+sleep 1
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist \
+'{"linear":{"x":0.0,"y":0.0,"z":0.0},"angular":{"x":0.0,"y":0.0,"z":0.0}}' \
+--once
+
+sleep 2
+
+# Warte auf den Service, sichere Lifecycle-Aktivierung
+until ros2 service list | grep -q "/reinitialize_global_localization"; do sleep 0.2; done
+ros2 lifecycle set /amcl configure
+ros2 lifecycle set /amcl activate
+
+# Lost-Robot-Modus
+echo "→ Streue Partikel über die ganze Karte"
+ros2 service call /reinitialize_global_localization std_srvs/srv/Empty {}
+sleep 1
+ros2 service call /request_nomotion_update std_srvs/srv/Empty {}
+
+# Erste Pose mit Kovarianz ausgeben
+echo "→ Erste Lokalisierungs-Schätzung:"
+ros2 topic echo /amcl_pose --once
+
+echo "✅ Alle Komponenten werden in separaten Terminals gestartet."
 
 echo "✅ Alle Komponenten werden in separaten Terminals gestartet."
