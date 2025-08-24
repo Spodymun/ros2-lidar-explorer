@@ -12,6 +12,7 @@
         <xacro:ros2_control_config esp_ip="$(arg esp_ip)" />
     </xacro:if>
     <xacro:include filename="lidar.xacro" />
+    <xacro:lidar_setup parent="top_plate" servo_link="servo_link" laser_frame="laser_frame" />
     <xacro:include filename="camera.xacro" />
     <xacro:include filename="face.xacro" />
     

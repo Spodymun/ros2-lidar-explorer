@@ -1,0 +1,8 @@
+octomap_server:
+  ros__parameters:
+    frame_id: "map"          # globales Frame für die Karte
+    resolution: 0.05         # Voxelgröße (m)
+    sensor_model:
+      max_range: 8.0         # begrenze Reichweite
+    pointcloud_min_z: -0.10  # simple Z-Filter
+    pointcloud_max_z:  2.00

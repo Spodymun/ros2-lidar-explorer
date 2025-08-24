@@ -1,19 +1,29 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="camera_on_plate" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <joint name="camera_joint" type="fixed">
-    <parent link="chassis"/>
+    <parent link="top_plate"/>
     <child link="camera_link"/>
-    <origin xyz="0.125 0 0.09" rpy="0 0 0"/>
+    <!-- Platte ist 0.17 m lang → Hälfte = 0.085 m.
+         Kamera-Tiefe = 0.01 m → Hälfte = 0.005 m.
+         Position x = 0.085 + 0.005 = 0.09 m -->
+    <origin xyz="0.09 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_link">
     <visual>
       <geometry>
-        <box size="0.010 0.03 0.03"/>
+        <box size="0.010 0.030 0.030"/>
       </geometry>
-      <material name="black"/>
+      <material name="camera_black">
+        <color rgba="0 0 0 1"/>
+      </material>
     </visual>
+    <collision>
+      <geometry>
+        <box size="0.010 0.030 0.030"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="camera_optical_joint" type="fixed">

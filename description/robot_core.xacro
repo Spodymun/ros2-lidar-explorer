@@ -142,4 +142,121 @@
   </visual>
 </link>
 
+  <xacro:property name="standoff_height" value="0.07"/>            
+  <xacro:property name="standoff_radius" value="0.005"/>          
+  <xacro:property name="plate_length" value="0.17"/>               
+  <xacro:property name="plate_width"  value="0.18"/>             
+  <xacro:property name="plate_thickness" value="0.003"/>          
+  <xacro:property name="standoff_inset_x" value="0.02"/>         
+  <xacro:property name="standoff_inset_y" value="0.02"/>
+  <xacro:property name="metal_rgba" value="0.7 0.7 0.7 1"/>
+
+  <material name="metal_gray"><color rgba="${metal_rgba}"/></material>
+
+  <xacro:property name="plate_center_x" value="0.01"/>
+  <xacro:property name="plate_center_y" value="0.0"/>
+  <xacro:property name="plate_center_z" value="${chassis_height + standoff_height + plate_thickness/2}"/>
+  <xacro:property name="sx" value="${(plate_length/2) - standoff_inset_x}"/>  
+  <xacro:property name="sy" value="${(plate_width/2)  - standoff_inset_y}"/>  
+  <xacro:property name="standoff_center_z" value="${chassis_height + standoff_height/2}"/>
+
+  <joint name="standoff_fl_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="standoff_fl"/>
+    <origin xyz="${plate_center_x + sx} ${plate_center_y + sy} ${standoff_center_z}" rpy="0 0 0"/>
+  </joint>
+  <link name="standoff_fl">
+    <visual>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+      <material name="metal_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="standoff_fr_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="standoff_fr"/>
+    <origin xyz="${plate_center_x + sx} ${plate_center_y - sy} ${standoff_center_z}" rpy="0 0 0"/>
+  </joint>
+  <link name="standoff_fr">
+    <visual>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+      <material name="metal_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="standoff_rl_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="standoff_rl"/>
+    <origin xyz="${plate_center_x - sx} ${plate_center_y + sy} ${standoff_center_z}" rpy="0 0 0"/>
+  </joint>
+  <link name="standoff_rl">
+    <visual>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+      <material name="metal_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="standoff_rr_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="standoff_rr"/>
+    <origin xyz="${plate_center_x - sx} ${plate_center_y - sy} ${standoff_center_z}" rpy="0 0 0"/>
+  </joint>
+  <link name="standoff_rr">
+    <visual>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+      <material name="metal_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${standoff_radius}" length="${standoff_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="top_plate_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="top_plate"/>
+    <origin xyz="${plate_center_x} ${plate_center_y} ${plate_center_z}" rpy="0 0 0"/>
+  </joint>
+  <link name="top_plate">
+    <visual>
+      <geometry>
+        <box size="${plate_length} ${plate_width} ${plate_thickness}"/>
+      </geometry>
+      <material name="metal_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${plate_length} ${plate_width} ${plate_thickness}"/>
+      </geometry>
+    </collision>
+
+    <xacro:inertial_box mass="0.3" x="${plate_length}" y="${plate_width}" z="${plate_thickness}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:inertial_box>
+  </link>
+
 </robot>
