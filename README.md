@@ -80,7 +80,10 @@ sudo apt update && sudo apt install -y \
     ros-jazzy-navigation2 \
     ros-jazzy-twist-mux \
     ros-jazzy-ros2-control \
-    ros-jazzy-nav2-bringup
+    ros-jazzy-nav2-bringup \
+    ros-jazzy-octomap \
+    ros-jazzy-octomap-msgs \
+    ros-jazzy-octomap-server
 
 sudo apt install -y python3-requests python3-urllib3 python3-numpy
 ```
@@ -426,7 +429,39 @@ source install/setup.bash
    ```
    If the rotation is too small, increase the factor. If it's too large, decrease it.
 
----
+### 4. Restrict Local Costmap (VoxelLayer) to Robot Height
+Goal: Only treat obstacles as blocking if they are **below** the robot’s height—so Robi can, for example, drive under tables when the tabletop is higher than the robot.
+
+1. **Determine robot height:** Measure the total height (including attachments) and add a **2–3 cm margin**. Example: 0.32 m.
+2. **Constrain the VoxelLayer:** Configure the VoxelLayer in your Nav2 parameter file `/config/nav2_params_3d_pi.yaml` so that only points up to the robot height are considered obstacles:
+
+```yaml
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      plugins: ["voxel_layer", "inflation_layer"]
+
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 0.32      # <- robot height + margin (example)
+        footprint_clearing_enabled: true
+        observation_sources: cloud
+        cloud:
+          topic: /servo_lidar/pointcloud
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.00
+          max_obstacle_height: 0.32    # <- same value as above
+          qos_overrides:
+            reliability: best_effort
+            durability: volatile
+```
    
 # ▶️ Running the Project  
 You'll need to set up a hotspot using a laptop, smartphone, or another compatible device.
@@ -440,6 +475,6 @@ Once everything is set up, follow these steps to launch mapping.
 
 ```bash
 cd ~/ws_lidar/src/ros2-lidar-explorer
-./mapping.sh IP_ADRESS_OF_YOUR_ESP
+./pi_3d_mapping.sh IP_ADRESS_OF_YOUR_ESP
 ```
 
