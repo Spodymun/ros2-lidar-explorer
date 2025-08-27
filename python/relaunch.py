@@ -22,6 +22,7 @@ class ExploreRelauncher(Node):
 
         # -------- runtime parameters --------
         self.map_name                     = sys.argv[1]
+        self.device                       = sys.argv[2]
         self.min_progress_distance        = 0.03   # m
         self.restart_delay                = 10     # s – do not restart twice in this window
         self.frontier_timeout             = 12     # s – no frontiers & no goal active
@@ -187,6 +188,22 @@ class ExploreRelauncher(Node):
             self.get_logger().info("Map saved successfully.")
         except subprocess.CalledProcessError as e:
             self.get_logger().error(f"Map save failed: {e.stderr}")
+
+        if self.device == "pi":
+            map3d_path = os.path.join(folder, "3D_Map.bt")
+            self.get_logger().info(f"Saving 3D OctoMap to: {map3d_path}")
+            
+            try:
+                subprocess.run(
+                    ['ros2', 'run', 'octomap_server', 'octomap_saver', map3d_path],
+                    check=True, capture_output=True, text=True
+                )
+                self.get_logger().info("3D OctoMap saved successfully.")
+            except subprocess.CalledProcessError as e:
+                self.get_logger().error(f"3D OctoMap save failed: {e.stderr}")
+        
+        elif self.device == "jetson":
+            print("Platzhalter")
 
         self.send_robot_home()
 
