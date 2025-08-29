@@ -24,7 +24,6 @@ rm -f ~/.ros/pose_db.db ~/.ros/slam_toolbox*db ~/.ros/seen_frontiers* ~/.ros/*.y
 
 cleanup() {
     echo "🛑 Shutting down background processes..."
-    save_3d_map
     kill $bg_pid1 $bg_pid2 $bg_pid3 $bg_pid4 $bg_pid5 $bg_pid6 \
          $bg_pid7 $bg_pid8 $bg_pid9 $bg_pid10 $bg_pid11 $bg_pid12 \
          $bg_pid13 2>/dev/null
