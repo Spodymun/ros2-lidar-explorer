@@ -75,7 +75,7 @@ bg_pid11=$!
 
 sleep 1
 
-python3 relaunch.py "$MAP_NAME" &
+python3 relaunch.py "$MAP_NAME" "normal"&
 bg_pid9=$!
 
 wait
