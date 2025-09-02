@@ -203,7 +203,10 @@ class ExploreRelauncher(Node):
                 self.get_logger().error(f"3D OctoMap save failed: {e.stderr}")
         
         elif self.device == "jetson":
-            print("Platzhalter")
+            pass                 #Platzhalter
+
+        elif self.device = "normal":
+            pass
 
         self.send_robot_home()
 
