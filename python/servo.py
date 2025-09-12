@@ -83,7 +83,7 @@ class ServoSweepNode(Node):
         self.min_deg = -self.pendulum_deg
         self.max_deg = +self.pendulum_deg
         self.angle = self.max_deg
-        self.direction = -1.0
+        self.direction = 1.0
         self._next_feedback_log_time = 0.0
 
         self.port = None
@@ -153,10 +153,10 @@ class ServoSweepNode(Node):
         return deep_find_mid(data)
 
     def deg2pos(self, angle_deg: float) -> int:
-        return int(round(self.mid_pos + angle_deg * 4096.0 / 360.0))
+        return int(round(self.mid_pos + (-angle_deg) * 4096.0 / 360.0))
 
     def pos2rad(self, ticks: int) -> float:
-        return (float(ticks) - float(self.mid_pos)) * (2.0 * math.pi / 4096.0)
+        return -((float(ticks) - float(self.mid_pos)) * (2.0 * math.pi / 4096.0))
 
     @staticmethod
     def _is_seq(x: Any) -> bool:
