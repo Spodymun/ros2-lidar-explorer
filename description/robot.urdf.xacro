@@ -9,7 +9,7 @@
 
     <xacro:if value="$(arg use_ros2_control)">
         <xacro:include filename="ros2_control.xacro" />
-        <xacro:ros2_control_config esp_ip="$(arg esp_ip)" />
+        <xacro:ros2_control_config />
     </xacro:if>
     <xacro:include filename="lidar.xacro" />
     <xacro:include filename="camera.xacro" />

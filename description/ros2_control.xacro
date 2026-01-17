@@ -1,17 +1,19 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:arg name="esp_ip" default="192.168.1.100"/>
-
-    <xacro:macro name="ros2_control_config" params="esp_ip">
-        <ros2_control name="RealRobot" type="system">
+    <xacro:macro name="ros2_control_config">
+        <ros2_control name="DiffDriveArduino" type="system">
             <hardware>
-                <plugin>mock_components/GenericSystem</plugin>
-                <param name="esp_ip">http://$(arg esp_ip)</param> <!-- ESP IP-Adresse -->
-                <param name="baud_rate">115200</param> <!-- Angepasste Baudrate -->
+                <plugin>diffdrive_arduino/DiffDriveArduino</plugin>
+                <param name="left_wheel_name">left_wheel_joint</param>
+                <param name="right_wheel_name">right_wheel_joint</param>
+                <param name="loop_rate">30</param>
+                <param name="device">/dev/ttyACM0</param>
+                <param name="baud_rate">57600</param>
                 <param name="timeout">1000</param>
+                <param name="enc_counts_per_rev">3436</param>
             </hardware>
-            <joint name="left_front_wheel_joint">
+            <joint name="left_wheel_joint">
                 <command_interface name="velocity">
                     <param name="min">-10</param>
                     <param name="max">10</param>
@@ -19,23 +21,7 @@
                 <state_interface name="velocity"/>
                 <state_interface name="position"/>
             </joint>
-            <joint name="left_rear_wheel_joint">
-                <command_interface name="velocity">
-                    <param name="min">-10</param>
-                    <param name="max">10</param>
-                </command_interface>
-                <state_interface name="velocity"/>
-                <state_interface name="position"/>
-            </joint>
-            <joint name="right_front_wheel_joint">
-                <command_interface name="velocity">
-                    <param name="min">-10</param>
-                    <param name="max">10</param>
-                </command_interface>
-                <state_interface name="velocity"/>
-                <state_interface name="position"/>
-            </joint>
-            <joint name="right_rear_wheel_joint">
+            <joint name="right_wheel_joint">
                 <command_interface name="velocity">
                     <param name="min">-10</param>
                     <param name="max">10</param>
