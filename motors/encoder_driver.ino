@@ -28,64 +28,100 @@
     else return encoders.XAxisReset();
   }
 #elif defined(ARDUINO_ENC_COUNTER)
-  volatile long left_enc_pos = 0L;
-  volatile long right_enc_pos = 0L;
+  // 4 Encoder positions for 4 motors
+  volatile long motor1_enc_pos = 0L;
+  volatile long motor2_enc_pos = 0L;
+  volatile long motor3_enc_pos = 0L;
+  volatile long motor4_enc_pos = 0L;
   
-  // Encoder interrupt handlers for Arduino Nano Every
-  // Left encoder on pins 2 and 3
-  void leftEncoderEvent() {
-    if (digitalRead(LEFT_ENC_PIN_A) == digitalRead(LEFT_ENC_PIN_B)) {
-      left_enc_pos++;
+  // Encoder interrupt handlers for 4 motors
+  void motor1EncoderEvent() {
+    if (digitalRead(ENC_MOTOR1_PIN_A) == digitalRead(ENC_MOTOR1_PIN_B)) {
+      motor1_enc_pos++;
     } else {
-      left_enc_pos--;
+      motor1_enc_pos--;
     }
   }
   
-  // Right encoder on pins 4 and 11
-  void rightEncoderEvent() {
-    if (digitalRead(RIGHT_ENC_PIN_A) == digitalRead(RIGHT_ENC_PIN_B)) {
-      right_enc_pos++;
+  void motor2EncoderEvent() {
+    if (digitalRead(ENC_MOTOR2_PIN_A) == digitalRead(ENC_MOTOR2_PIN_B)) {
+      motor2_enc_pos++;
     } else {
-      right_enc_pos--;
+      motor2_enc_pos--;
     }
   }
   
-  /* Initialize encoders */
+  void motor3EncoderEvent() {
+    if (digitalRead(ENC_MOTOR3_PIN_A) == digitalRead(ENC_MOTOR3_PIN_B)) {
+      motor3_enc_pos++;
+    } else {
+      motor3_enc_pos--;
+    }
+  }
+  
+  void motor4EncoderEvent() {
+    if (digitalRead(ENC_MOTOR4_PIN_A) == digitalRead(ENC_MOTOR4_PIN_B)) {
+      motor4_enc_pos++;
+    } else {
+      motor4_enc_pos--;
+    }
+  }
+  
+  /* Initialize all 4 encoders */
   void initEncoders() {
-    pinMode(LEFT_ENC_PIN_A, INPUT_PULLUP);
-    pinMode(LEFT_ENC_PIN_B, INPUT_PULLUP);
-    pinMode(RIGHT_ENC_PIN_A, INPUT_PULLUP);
-    pinMode(RIGHT_ENC_PIN_B, INPUT_PULLUP);
+    // Motor 1 encoder pins
+    pinMode(ENC_MOTOR1_PIN_A, INPUT_PULLUP);
+    pinMode(ENC_MOTOR1_PIN_B, INPUT_PULLUP);
     
-    // Attach interrupts - Arduino Nano Every supports interrupts on most pins
-    attachInterrupt(digitalPinToInterrupt(LEFT_ENC_PIN_A), leftEncoderEvent, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(RIGHT_ENC_PIN_A), rightEncoderEvent, CHANGE);
+    // Motor 2 encoder pins
+    pinMode(ENC_MOTOR2_PIN_A, INPUT_PULLUP);
+    pinMode(ENC_MOTOR2_PIN_B, INPUT_PULLUP);
+    
+    // Motor 3 encoder pins
+    pinMode(ENC_MOTOR3_PIN_A, INPUT_PULLUP);
+    pinMode(ENC_MOTOR3_PIN_B, INPUT_PULLUP);
+    
+    // Motor 4 encoder pins
+    pinMode(ENC_MOTOR4_PIN_A, INPUT_PULLUP);
+    pinMode(ENC_MOTOR4_PIN_B, INPUT_PULLUP);
+    
+    // Attach interrupts for all 4 motor encoders
+    attachInterrupt(digitalPinToInterrupt(ENC_MOTOR1_PIN_A), motor1EncoderEvent, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_MOTOR2_PIN_A), motor2EncoderEvent, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_MOTOR3_PIN_A), motor3EncoderEvent, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_MOTOR4_PIN_A), motor4EncoderEvent, CHANGE);
   }
   
-  /* Wrap the encoder reading function */
+  /* Wrap the encoder reading function - supports 0-3 for 4 motors */
   long readEncoder(int i) {
-    if (i == LEFT) return left_enc_pos;
-    else return right_enc_pos;
+    switch(i) {
+      case MOTOR1: return motor1_enc_pos;
+      case MOTOR2: return motor2_enc_pos;
+      case MOTOR3: return motor3_enc_pos;
+      case MOTOR4: return motor4_enc_pos;
+      default: return 0L;
+    }
   }
 
   /* Wrap the encoder reset function */
   void resetEncoder(int i) {
-    if (i == LEFT){
-      left_enc_pos=0L;
-      return;
-    } else { 
-      right_enc_pos=0L;
-      return;
+    switch(i) {
+      case MOTOR1: motor1_enc_pos = 0L; break;
+      case MOTOR2: motor2_enc_pos = 0L; break;
+      case MOTOR3: motor3_enc_pos = 0L; break;
+      case MOTOR4: motor4_enc_pos = 0L; break;
     }
   }
 #else
   #error A encoder driver must be selected!
 #endif
 
-/* Wrap the encoder reset function */
+/* Wrap the encoder reset function for all 4 motors */
 void resetEncoders() {
-  resetEncoder(LEFT);
-  resetEncoder(RIGHT);
+  resetEncoder(MOTOR1);
+  resetEncoder(MOTOR2);
+  resetEncoder(MOTOR3);
+  resetEncoder(MOTOR4);
 }
 
 #endif

@@ -87,44 +87,68 @@
     setMotorSpeed(RIGHT, rightSpeed);
   }
 #elif defined MDD10A_MOTOR_DRIVER
-  /* MDD10A Motor Driver Implementation */
+  /* MDD10A Motor Driver Implementation - 4 Motors */
   void initMotorController() {
-    pinMode(LEFT_MOTOR_PWM, OUTPUT);
-    pinMode(RIGHT_MOTOR_PWM, OUTPUT);
-    pinMode(LEFT_MOTOR_DIR, OUTPUT);
-    pinMode(RIGHT_MOTOR_DIR, OUTPUT);
+    // Motor 1 & 2 pins (Driver 1)
+    pinMode(MOTOR1_PWM, OUTPUT);
+    pinMode(MOTOR1_DIR, OUTPUT);
+    pinMode(MOTOR2_PWM, OUTPUT);
+    pinMode(MOTOR2_DIR, OUTPUT);
     
-    // Initialize motors to stopped state
-    analogWrite(LEFT_MOTOR_PWM, 0);
-    analogWrite(RIGHT_MOTOR_PWM, 0);
-    digitalWrite(LEFT_MOTOR_DIR, LOW);
-    digitalWrite(RIGHT_MOTOR_DIR, LOW);
+    // Motor 3 & 4 pins (Driver 2)
+    pinMode(MOTOR3_PWM, OUTPUT);
+    pinMode(MOTOR3_DIR, OUTPUT);
+    pinMode(MOTOR4_PWM, OUTPUT);
+    pinMode(MOTOR4_DIR, OUTPUT);
+    
+    // Initialize all motors to stopped state
+    analogWrite(MOTOR1_PWM, 0);
+    analogWrite(MOTOR2_PWM, 0);
+    analogWrite(MOTOR3_PWM, 0);
+    analogWrite(MOTOR4_PWM, 0);
+    digitalWrite(MOTOR1_DIR, LOW);
+    digitalWrite(MOTOR2_DIR, LOW);
+    digitalWrite(MOTOR3_DIR, LOW);
+    digitalWrite(MOTOR4_DIR, LOW);
   }
   
   void setMotorSpeed(int i, int spd) {
     unsigned char reverse = 0;
-  
-    if (spd < 0)
-    {
+    
+    if (spd < 0) {
       spd = -spd;
       reverse = 1;
     }
     if (spd > 255)
       spd = 255;
     
-    if (i == LEFT) { 
-      digitalWrite(LEFT_MOTOR_DIR, reverse);
-      analogWrite(LEFT_MOTOR_PWM, spd);
-    }
-    else /*if (i == RIGHT)*/ {
-      digitalWrite(RIGHT_MOTOR_DIR, reverse);
-      analogWrite(RIGHT_MOTOR_PWM, spd);
+    // Handle 4 motors (0-3)
+    switch(i) {
+      case MOTOR1:
+        digitalWrite(MOTOR1_DIR, reverse);
+        analogWrite(MOTOR1_PWM, spd);
+        break;
+      case MOTOR2:
+        digitalWrite(MOTOR2_DIR, reverse);
+        analogWrite(MOTOR2_PWM, spd);
+        break;
+      case MOTOR3:
+        digitalWrite(MOTOR3_DIR, reverse);
+        analogWrite(MOTOR3_PWM, spd);
+        break;
+      case MOTOR4:
+        digitalWrite(MOTOR4_DIR, reverse);
+        analogWrite(MOTOR4_PWM, spd);
+        break;
     }
   }
   
   void setMotorSpeeds(int leftSpeed, int rightSpeed) {
-    setMotorSpeed(LEFT, leftSpeed);
-    setMotorSpeed(RIGHT, rightSpeed);
+    // Legacy compatibility: control left side (Motors 1&2) and right side (Motors 3&4)
+    setMotorSpeed(MOTOR1, leftSpeed);
+    setMotorSpeed(MOTOR2, leftSpeed);
+    setMotorSpeed(MOTOR3, rightSpeed);
+    setMotorSpeed(MOTOR4, rightSpeed);
   }
 #else
   #error A motor driver must be selected!
