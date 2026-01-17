@@ -22,12 +22,7 @@ def generate_launch_description():
         value='0'
     )
 
-    # Launch argument for ESP IP
-    esp_ip_arg = DeclareLaunchArgument(
-        'esp_ip',
-        description='IP-Adresse des ESP'
-    )
-    esp_ip = LaunchConfiguration('esp_ip')
+
 
     # Package path
     package_name = 'ros2-lidar-explorer'
@@ -38,15 +33,13 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(pkg_path, 'launch', 'rsp.launch.py')
         ),
-        launch_arguments={  
+        launch_arguments={
             'use_sim_time': 'false',
-            'use_ros2_control': 'false',
-            'esp_ip': esp_ip
+            'use_ros2_control': 'false'
         }.items()
     )
 
     return LaunchDescription([
         shm_fix,
-        esp_ip_arg,
         rsp,
     ])

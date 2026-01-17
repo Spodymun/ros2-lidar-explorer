@@ -130,11 +130,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        left_mid_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         left_rear_wheel:
           Alpha: 1
           Show Axes: false
@@ -145,12 +140,32 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        right_mid_wheel:
+        right_rear_wheel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        right_rear_wheel:
+        standoff_fl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_fr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_rl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        standoff_rr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        top_plate:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -441,21 +456,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0.19999997317790985
-      Class: rviz_default_plugins/TopDownOrtho
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 3.9760375022888184
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 0.08988020569086075
+        Y: 0.09843683987855911
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 95.04695129394531
+      Pitch: 0.86479651927948
       Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: 4.971901893615723
-      Y: -2.290344715118408
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 0.6492050886154175
     Saved: ~
 Window Geometry:
   Displays:

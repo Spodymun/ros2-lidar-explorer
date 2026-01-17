@@ -403,3 +403,4 @@ loopback_simulator:
     map_frame_id: "map"
     scan_frame_id: "base_scan"
     update_duration: 0.02
+    

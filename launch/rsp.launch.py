@@ -12,7 +12,6 @@ def generate_launch_description():
     # Declare launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_ros2_control = LaunchConfiguration('use_ros2_control')
-    esp_ip = LaunchConfiguration('esp_ip')
 
     # Locate the xacro file
     pkg_path = get_package_share_directory('ros2-lidar-explorer')
@@ -22,8 +21,7 @@ def generate_launch_description():
     robot_description = Command([
         'xacro ', xacro_file,
         ' use_ros2_control:=', use_ros2_control,
-        ' sim_mode:=', use_sim_time,
-        ' esp_ip:=', esp_ip
+        ' sim_mode:=', use_sim_time
     ])
 
     # Robot state publisher node
@@ -48,9 +46,7 @@ def generate_launch_description():
             'use_ros2_control',
             default_value='true',
             description='Use ros2_control interface if true'),
-        DeclareLaunchArgument(
-            'esp_ip',
-            description='IP address of the ESP32-based microcontroller'),
+
 
         robot_state_publisher_node
     ])

@@ -1,0 +1,126 @@
+================================================================================
+ROSArduinoBridge - Hardware Configuration
+Arduino Nano Every + Pololu 50:1 Metal Gearmotor + MDD10A Motor Driver
+================================================================================
+
+HARDWARE COMPONENTS:
+--------------------
+- Microcontroller: Arduino Nano Every
+- Motors: Pololu 50:1 Metal Gearmotor 37Dx70L with 64 CPR Encoder (4x)
+- Motor Drivers: MDD10A Rev2.0 Dual Motor Driver (2x)
+
+PIN CONNECTIONS:
+----------------
+
+Motor Driver 1 (MDD10A) - LEFT SIDE:
+  Motor 1 (Left Front):
+    - PWM3A -> Arduino Pin 3  (Speed control)
+    - DIR1  -> Arduino Pin 4  (Direction control)
+  
+  Motor 2 (Left Rear):
+    - PWM3A -> Arduino Pin 9  (Speed control)
+    - DIR3  -> Arduino Pin 12 (Direction control)
+
+Motor Driver 2 (MDD10A) - RIGHT SIDE:
+  Motor 3 (Right Front):
+    - PWM1B -> Arduino Pin 6  (Speed control)
+    - DIR2  -> Arduino Pin 8  (Direction control)
+  
+  Motor 4 (Right Rear):
+    - PWM3B -> Arduino Pin 10 (Speed control)
+    - DIR4  -> Arduino Pin 13 (Direction control)
+  
+  Power (both drivers):
+    - VCC -> Arduino 5V
+    - GND -> Arduino GND
+    - Motor power supply connected to M+ and M- terminals
+
+Encoders (Pololu Motors - 64 CPR, 4x total):
+  Motor 1 Encoder (Left Front):
+    - VCC (Blue)    -> Arduino 5V
+    - GND (Green)   -> Arduino GND
+    - Encoder A (Yellow) -> Arduino Pin 2  (interrupt capable)
+    - Encoder B (White)  -> Arduino Pin 5
+  
+  Motor 2 Encoder (Left Rear):
+    - VCC (Blue)    -> Arduino 5V
+    - GND (Green)   -> Arduino GND
+    - Encoder A (Yellow) -> Arduino Pin 0  (interrupt capable)
+    - Encoder B (White)  -> Arduino Pin 14
+  
+  Motor 3 Encoder (Right Front):
+    - VCC (Blue)    -> Arduino 5V
+    - GND (Green)   -> Arduino GND
+    - Encoder A (Yellow) -> Arduino Pin 7  (interrupt capable)
+    - Encoder B (White)  -> Arduino Pin 11
+  
+  Motor 4 Encoder (Right Rear):
+    - VCC (Blue)    -> Arduino 5V
+    - GND (Green)   -> Arduino GND
+    - Encoder A (Yellow) -> Arduino Pin 1  (interrupt capable)
+    - Encoder B (White)  -> Arduino Pin 15
+
+-----
+
+  MOTOR 2 (Links hinten):
+    PWM3A → Arduino Pin 9
+    DIR3  → Arduino Pin 12
+
+  MOTOR 4 (Rechts hinten):
+    PWM3B → Arduino Pin 10
+    DIR4  → Arduino Pin 13
+
+ENCODER SPECIFICATIONS:
+-----------------------
+- Counts Per Revolution (CPR): 64
+- After gearbox (50:1 ratio): 3200 counts per wheel revolution
+- Quadrature encoding for direction detection
+
+PWM PINS ON ARDUINO NANO EVERY:
+--------------------------------
+Available PWM pins: 3, 5, 6, 9, 10
+Used pins: 3 (Motor 1 PWM), 9 (Motor 2 PWM), 6 (Motor 3 PWM), 10 (Motor 4 PWM)
+
+INTERRUPT-CAPABLE PINS (For Encoders):
+---------------------------------------
+Used: 0, 1, 2, 7 (all for encoder A channels)
+
+NOTES:
+------
+1. The MDD10A uses PWM for speed control (0-255) and a separate digital pin
+   for direction (HIGH/LOW).
+   
+2. Arduino Nano Every supports external interrupts on most digital pins,
+   so we use pins 2 and 3 for best interrupt performance on the left encoder.
+   
+3. Make sure to connect a suitable power supply to the MDD10A motor driver.
+   The motors require separate power from the Arduino logic.
+
+4. If encoder direction is reversed, swap the A and B channel connections
+   or modify the encoder interrupt logic in encoder_driver.ino.
+
+5. PID tuning may need adjustment based on your specific robot configuration.
+   Current default values in ROSArduinoBridge_4ENCODERS.ino:
+   - Kp = 20
+   - Kd = 12
+   - Ki = 0
+   - Ko = 50
+
+SERIAL PROTOCOL (57600 Baud):
+------------------------------
+Commands sent as: '<command> <arg1> <arg2>\r'
+Responses: encoders as space-separated, motor data as comma-separated
+
+Motor data format (command 'f'):
+  m1_encoder,m2_encoder,m3_encoder,m4_encoder,m1_pwm,m2_pwm,m3_pwm,m4_pwm
+
+QUADCOPTER ARCHITECTURE:
+------------------------
+  Front Left (Motor 1) ----- Front Right (Motor 3)
+         |                        |
+         |        Robot           |
+         |                        |
+  Rear Left (Motor 2) ------ Rear Right (Motor 4)
+
+Motor 1 & 2: Controlled together (left side)
+Motor 3 & 4: Controlled together (right side)
