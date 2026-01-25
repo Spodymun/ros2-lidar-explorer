@@ -28,7 +28,7 @@ class CmdVelToMotors(Node):
         
         # Robot parameters
         self.wheel_separation = 0.23  # Distance between left and right wheels (m)
-        self.wheel_radius = 0.048     # Wheel radius (m) - kalibriert (9,6cm Durchmesser)
+        self.wheel_radius = 0.069     # Wheel radius (m) - kalibriert (9,6cm Durchmesser)
         self.max_speed = 1.0          # Max linear speed (m/s)
         self.max_angular = 2.0        # Max angular speed (rad/s)
         
@@ -40,6 +40,7 @@ class CmdVelToMotors(Node):
         # Extract linear and angular velocity
         v_x = msg.linear.x   # Linear velocity (m/s)
         w_z = msg.angular.z  # Angular velocity (rad/s)
+        self.get_logger().info(f"cmd_vel received: linear.x={v_x:.3f}, angular.z={w_z:.3f}")
         
         # Differential drive kinematics
         # v_left = v_x - w_z * (wheel_separation / 2)
@@ -57,10 +58,13 @@ class CmdVelToMotors(Node):
         # Assuming max_speed corresponds to PWM = 255
         pwm_left = int((v_left / self.max_speed) * 255) if self.max_speed > 0 else 0
         pwm_right = int((v_right / self.max_speed) * 255) if self.max_speed > 0 else 0
-        
+
         # Clamp to [-255, 255]
         pwm_left = max(-255, min(255, pwm_left))
         pwm_right = max(-255, min(255, pwm_right))
+        
+        # Debug: Zeige berechnete PWM-Werte
+        self.get_logger().info(f"Calculated PWM: left={pwm_left}, right={pwm_right}")
         
         # Send to Arduino
         # Format: "m <pwm_left> <pwm_right>\r"
@@ -68,7 +72,7 @@ class CmdVelToMotors(Node):
         
         try:
             self.serial_conn.write(command.encode())
-            self.get_logger().debug(f'Sent: {command.strip()}')
+            self.get_logger().info(f'Sent to Arduino: {command.strip()}')
         except Exception as e:
             self.get_logger().error(f'Failed to send command: {e}')
 

@@ -1,6 +1,6 @@
 /*****
 Motor Bridge with 4 Motors + 4 Encoders and PID Control for Arduino Nano Every + 2x MDD10A
-Supports LIDAR Explorer ROS2 Interface
+Supports LIDAR Explorer ROS2 Interface - COMPLETE IMPLEMENTATION
 Full 4-motor configuration with independent encoder tracking
 *****/
 
@@ -44,6 +44,7 @@ Full 4-motor configuration with independent encoder tracking
 #define RESET_ENCODERS 'r'
 #define GET_BAUDRATE   'b'
 
+// ============ GLOBAL VARIABLES ============
 volatile long motor1_enc_pos = 0L;
 volatile long motor2_enc_pos = 0L;
 volatile long motor3_enc_pos = 0L;
@@ -65,17 +66,11 @@ SetPointInfo motor1PID, motor2PID, motor3PID, motor4PID;
 
 int Kp = 20, Kd = 12, Ki = 0, Ko = 50;
 
-void doPID(SetPointInfo * p) {
-  long Perror, Derror, output;
-  int input = p->Encoder - p->PrevEnc;
-  p->PrevEnc = p->Encoder;
-  Perror = p->TargetTicksPerFrame - input;
-  Derror = Kd * (Perror - p->PrevInput);
-  output = Ko + Kp * Perror + Derror;
-  p->PrevInput = Perror;
-  p->output = output;
-}
+char cmd, argv1[16], argv2[16];
+long arg1, arg2;
+int parsing_state = 0;  // 0=cmd, 1=arg1, 2=arg2
 
+// ============ MOTOR CONTROL ============
 void initMotorController() {
   for (int i = 0; i < 4; i++) {
     pinMode(motor_pwm_pins[i], OUTPUT);
@@ -96,6 +91,43 @@ void setMotorSpeed(int motor_id, int spd) {
   analogWrite(motor_pwm_pins[motor_id], spd);
 }
 
+// ============ PID CONTROL ============
+void doPID(SetPointInfo * p) {
+  long Perror, Derror, output;
+  int input = p->Encoder - p->PrevEnc;
+  p->PrevEnc = p->Encoder;
+  Perror = p->TargetTicksPerFrame - input;
+  Derror = Kd * (Perror - p->PrevInput);
+  output = Ko + Kp * Perror + Derror;
+  p->PrevInput = Perror;
+  p->output = output;
+}
+
+void resetPID() {
+  motor1PID.TargetTicksPerFrame = motor1PID.output = 0;
+  motor2PID.TargetTicksPerFrame = motor2PID.output = 0;
+  motor3PID.TargetTicksPerFrame = motor3PID.output = 0;
+  motor4PID.TargetTicksPerFrame = motor4PID.output = 0;
+}
+
+void updatePID() {
+  motor1PID.Encoder = readEncoder(MOTOR1);
+  motor2PID.Encoder = readEncoder(MOTOR2);
+  motor3PID.Encoder = readEncoder(MOTOR3);
+  motor4PID.Encoder = readEncoder(MOTOR4);
+  
+  doPID(&motor1PID);
+  doPID(&motor2PID);
+  doPID(&motor3PID);
+  doPID(&motor4PID);
+  
+  setMotorSpeed(MOTOR1, motor1PID.output);
+  setMotorSpeed(MOTOR2, motor2PID.output);
+  setMotorSpeed(MOTOR3, motor3PID.output);
+  setMotorSpeed(MOTOR4, motor4PID.output);
+}
+
+// ============ ENCODER HANDLING ============
 void motor1EncoderEvent() { motor1_enc_pos += (digitalRead(ENC_MOTOR1_PIN_A) == digitalRead(ENC_MOTOR1_PIN_B)) ? 1 : -1; }
 void motor2EncoderEvent() { motor2_enc_pos += (digitalRead(ENC_MOTOR2_PIN_A) == digitalRead(ENC_MOTOR2_PIN_B)) ? 1 : -1; }
 void motor3EncoderEvent() { motor3_enc_pos += (digitalRead(ENC_MOTOR3_PIN_A) == digitalRead(ENC_MOTOR3_PIN_B)) ? 1 : -1; }
@@ -128,33 +160,7 @@ void resetEncoders() {
   motor1_enc_pos = motor2_enc_pos = motor3_enc_pos = motor4_enc_pos = 0;
 }
 
-void resetPID() {
-  motor1PID.TargetTicksPerFrame = motor1PID.output = 0;
-  motor2PID.TargetTicksPerFrame = motor2PID.output = 0;
-  motor3PID.TargetTicksPerFrame = motor3PID.output = 0;
-  motor4PID.TargetTicksPerFrame = motor4PID.output = 0;
-}
-
-void updatePID() {
-  motor1PID.Encoder = readEncoder(MOTOR1);
-  motor2PID.Encoder = readEncoder(MOTOR2);
-  motor3PID.Encoder = readEncoder(MOTOR3);
-  motor4PID.Encoder = readEncoder(MOTOR4);
-  
-  doPID(&motor1PID);
-  doPID(&motor2PID);
-  doPID(&motor3PID);
-  doPID(&motor4PID);
-  
-  setMotorSpeed(MOTOR1, motor1PID.output);
-  setMotorSpeed(MOTOR2, motor2PID.output);
-  setMotorSpeed(MOTOR3, motor3PID.output);
-  setMotorSpeed(MOTOR4, motor4PID.output);
-}
-
-char cmd, argv1[16], argv2[16];
-long arg1, arg2;
-
+// ============ SETUP & LOOP ============
 void setup() {
   Serial.begin(BAUDRATE);
   initEncoders();
@@ -165,7 +171,15 @@ void setup() {
 void loop() {
   while (Serial.available() > 0) {
     char chr = Serial.read();
-    if (chr == '\r') {
+    
+    if (chr == '\r' || chr == '\n') {
+      // End of command
+      // Parse arg2 only if we have it
+      if (parsing_state >= 2) {
+        arg2 = atoi(argv2);
+      }
+      
+      // Execute command regardless of argument count
       if (cmd == GET_BAUDRATE) Serial.println(BAUDRATE);
       else if (cmd == READ_ENCODERS) {
         Serial.print(readEncoder(MOTOR1));
@@ -192,34 +206,46 @@ void loop() {
         Serial.println("OK");
       }
       else if (cmd == MOTOR_SPEEDS) {
-        if (arg1 == 0 && arg2 == 0) {
-          setMotorSpeed(MOTOR1, 0);
-          setMotorSpeed(MOTOR2, 0);
-          setMotorSpeed(MOTOR3, 0);
-          setMotorSpeed(MOTOR4, 0);
-          resetPID();
-        } else {
-          motor1PID.TargetTicksPerFrame = arg1;
-          motor2PID.TargetTicksPerFrame = arg1;
-          motor3PID.TargetTicksPerFrame = arg2;
-          motor4PID.TargetTicksPerFrame = arg2;
-        }
+        // Direct PWM control: arg1 = left speed, arg2 = right speed
+        setMotorSpeed(MOTOR1, arg1);
+        setMotorSpeed(MOTOR2, arg1);
+        setMotorSpeed(MOTOR3, arg2);
+        setMotorSpeed(MOTOR4, arg2);
         Serial.println("OK");
       }
+      // Reset for next command
+      parsing_state = 0;
       cmd = 0;
+      arg1 = 0;
+      arg2 = 0;
       memset(argv1, 0, 16);
       memset(argv2, 0, 16);
     }
     else if (chr == ' ') {
-      arg1 = atoi(argv1);
-      memset(argv1, 0, 16);
-      strcpy(argv2, argv1);
+      // Delimiter between command/args
+      if (parsing_state == 0) {
+        // Command received, switch to arg1
+        parsing_state = 1;
+        arg1 = 0;
+      } else if (parsing_state == 1) {
+        // arg1 received, switch to arg2
+        arg1 = atoi(argv1);
+        parsing_state = 2;
+        memset(argv1, 0, 16);
+      }
+      // ignore spaces in other states
     }
-    else if (cmd == 0) cmd = chr;
-    else if (argv1[0] == 0) {
+    else if (parsing_state == 0) {
+      // Reading command (single char)
+      cmd = chr;
+    }
+    else if (parsing_state == 1) {
+      // Reading arg1
       size_t len = strlen(argv1);
       if (len < 15) argv1[len] = chr;
-    } else {
+    }
+    else if (parsing_state == 2) {
+      // Reading arg2
       size_t len = strlen(argv2);
       if (len < 15) argv2[len] = chr;
     }

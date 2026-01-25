@@ -104,8 +104,9 @@ class MotorPublisher(Node):
                         motor4_pwm = int(parts[7])
                         
                         # Average encoders
+                        # NOTE: Right side motors are mirrored, so negate their encoder values
                         encoder_left = (encoder_1 + encoder_2) // 2
-                        encoder_right = (encoder_3 + encoder_4) // 2
+                        encoder_right = -(encoder_3 + encoder_4) // 2  # Negated for mirrored motor config
                         
                         if self.first_reading:
                             self.last_encoder_left = encoder_left
@@ -130,16 +131,26 @@ class MotorPublisher(Node):
                             
                             self.theta = (self.theta + delta_theta + pi) % (2 * pi) - pi
                             
-                            # Update wheel angles based on distance (for joint_states)
-                            if avg_distance > 1e-6:
-                                angle_delta = avg_distance / self.wheel_radius
-                                for key in self.wheel_angles:
-                                    self.wheel_angles[key] += angle_delta
-                                    # Normalize to [-pi, pi]
-                                    self.wheel_angles[key] = atan2(
-                                        sin(self.wheel_angles[key]),
-                                        cos(self.wheel_angles[key])
-                                    )
+                            # Update wheel angles based on actual wheel distances (for joint_states)
+                            # Use delta_left and delta_right directly for accurate wheel rotation
+                            angle_delta_left = delta_left / self.wheel_radius
+                            angle_delta_right = delta_right / self.wheel_radius  # Already negated from encoder reading
+                            
+                            # Update left wheels
+                            for key in ['left_front_wheel_joint', 'left_rear_wheel_joint']:
+                                self.wheel_angles[key] += angle_delta_left
+                                self.wheel_angles[key] = atan2(
+                                    sin(self.wheel_angles[key]),
+                                    cos(self.wheel_angles[key])
+                                )
+                            
+                            # Update right wheels (negated because of mirrored motor config)
+                            for key in ['right_front_wheel_joint', 'right_rear_wheel_joint']:
+                                self.wheel_angles[key] -= angle_delta_right
+                                self.wheel_angles[key] = atan2(
+                                    sin(self.wheel_angles[key]),
+                                    cos(self.wheel_angles[key])
+                                )
                             
                             self.last_encoder_left = encoder_left
                             self.last_encoder_right = encoder_right

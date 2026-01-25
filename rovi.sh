@@ -5,7 +5,7 @@
 # Minimierte Terminal-Ansicht
 
 # Arduino Port überprüfen
-ARDUINO_PORT="${1:-/dev/ttyACM0}"
+ARDUINO_PORT="${1:-/dev/ttyACM2}"
 if [ ! -e "$ARDUINO_PORT" ]; then
     ARDUINO_PORT="/dev/ttyUSB0"
 fi
