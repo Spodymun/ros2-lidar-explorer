@@ -13,8 +13,8 @@ from typing import Any, Dict, Optional, Iterable
 import yaml
 
 CANDIDATE_PATHS = [
-    "/home/robi/ws_lidar/src/STServo_Python/stservo-env",
-    "/home/robi/ws_lidar/src/STServo_Python",
+    "/home/rovi/ws_lidar/src/STServo_Python/stservo-env",
+    "/home/rovi/ws_lidar/src/STServo_Python",
 ]
 for p in CANDIDATE_PATHS:
     if os.path.isdir(p) and p not in sys.path:
@@ -47,7 +47,7 @@ class ServoSweepNode(Node):
         super().__init__('servo_sweep_node')
         self.joint_pub = self.create_publisher(JointState, 'joint_states', 10)
 
-        self.declare_parameter("device", "/dev/ttyACM0")
+        self.declare_parameter("device", "/dev/ttyACM1")
         self.declare_parameter("baud", 1_000_000)
         self.declare_parameter("servo_id", 1)
         self.declare_parameter("speed", 175)
@@ -116,8 +116,12 @@ class ServoSweepNode(Node):
         except Exception:
             return
 
+        # Start sweep loop regardless of hardware availability
         self.thread = Thread(target=self.sweep_loop, daemon=True)
         self.thread.start()
+        
+        if PortHandler is None or sts_cls is None:
+            self.get_logger().warn("⚠️ STServo libraries not found - servo will publish dummy positions only")
 
     def try_load_mid_pos_from_yaml(self, path: str) -> Optional[int]:
         try:

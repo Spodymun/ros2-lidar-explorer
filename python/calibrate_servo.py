@@ -10,8 +10,8 @@ import yaml
 
 # ---- Servo SDK Setup (wie in deinem Code) ----
 CANDIDATE_PATHS = [
-    "/home/robi/ws_lidar/src/STServo_Python/stservo-env",
-    "/home/robi/ws_lidar/src/STServo_Python",
+    "/home/rovi/ws_lidar/src/STServo_Python/stservo-env",
+    "/home/rovi/ws_lidar/src/STServo_Python",
 ]
 for p in CANDIDATE_PATHS:
     if os.path.isdir(p) and p not in sys.path:
@@ -89,10 +89,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Einmaliges Kalibrierungsskript: Mittellage per Hand einstellen und als mid_pos übernehmen."
     )
-    parser.add_argument("--device", default="/dev/ttyACM0", help="Serielle Schnittstelle")
+    parser.add_argument("--device", default="/dev/ttyACM1", help="Serielle Schnittstelle")
     parser.add_argument("--baud", type=int, default=1_000_000, help="Baudrate")
     parser.add_argument("--id", type=int, default=1, help="Servo-ID")
-    parser.add_argument("--save-yaml", default="", help="Optionaler Pfad zu einer YAML-Datei für ROS2-Parameter")
+    parser.add_argument("--save-yaml", default="/home/rovi/ws_lidar/src/ros2-lidar-explorer/config/calibrate.yaml", help="Optionaler Pfad zu einer YAML-Datei für ROS2-Parameter")
     parser.add_argument("--node-name", default="servo_sweep_node", help="ROS2-Knotenname in der YAML")
     parser.add_argument("--ns", default="", help="ROS2-Namespace (optional), z.B. 'lidar' oder '/robot1/lidar'")
     parser.add_argument("--old-mid", type=int, default=2048, help="Bisher angenommener mid_pos (nur für Info-Ausgabe)")

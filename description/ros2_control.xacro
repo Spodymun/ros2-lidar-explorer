@@ -1,17 +1,15 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="ros2_control_config">
-        <ros2_control name="DiffDriveArduino" type="system">
+    <xacro:arg name="esp_ip" default="192.168.1.100"/>
+
+    <xacro:macro name="ros2_control_config" params="esp_ip">
+        <ros2_control name="RealRobot" type="system">
             <hardware>
-                <plugin>diffdrive_arduino/DiffDriveArduino</plugin>
-                <param name="left_wheel_name">left_wheel_joint</param>
-                <param name="right_wheel_name">right_wheel_joint</param>
-                <param name="loop_rate">30</param>
-                <param name="device">/dev/ttyACM0</param>
-                <param name="baud_rate">57600</param>
+                <plugin>mock_components/GenericSystem</plugin>
+                <param name="esp_ip">http://$(arg esp_ip)</param> <!-- ESP IP-Adresse -->
+                <param name="baud_rate">115200</param> <!-- Angepasste Baudrate -->
                 <param name="timeout">1000</param>
-                <param name="enc_counts_per_rev">3436</param>
             </hardware>
             <joint name="left_wheel_joint">
                 <command_interface name="velocity">

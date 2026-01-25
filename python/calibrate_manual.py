@@ -4,7 +4,7 @@ import serial
 import sys
 import time
 
-def manual_calibrate(serial_port='/dev/ttyACM0'):
+def manual_calibrate(serial_port='/dev/ttyACM2'):
     """
     Manuelle Encoder-Kalibrierung
     

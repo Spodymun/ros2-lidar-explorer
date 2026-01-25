@@ -18,6 +18,15 @@ fi
 
 echo "✅ Arduino gefunden: $ARDUINO_PORT"
 
+# ROS env
+source /opt/ros/jazzy/setup.bash
+source ~/ws_lidar/install/setup.bash
+
+# Servo VENV (falls vorhanden)
+if [ -f ~/ws_lidar/src/STServo_Python/venv-servo/bin/activate ]; then
+    source ~/ws_lidar/src/STServo_Python/venv-servo/bin/activate
+fi
+
 # Karten-Name
 read -p "Karten-Name: " MAP_NAME
 if [ -z "$MAP_NAME" ]; then
@@ -97,7 +106,25 @@ echo "[8] Navigate Relay"
 
 sleep 1
 
-# 9) Nav2 Navigation Stack
+# 9) Servo Control (immer - bei 2D mit 0° pendulum, bei 3D mit 15° pendulum)
+if [ "$USE_3D_MAPPING" = "j" ] || [ "$USE_3D_MAPPING" = "J" ]; then
+  PENDULUM_DEG="15.0"
+  DELTA_DEG="0.5"
+else
+  PENDULUM_DEG="0.0"  # Bei 2D: Servo statisch, aber sichtbar
+  DELTA_DEG="0.0"     # Keine Bewegung!
+fi
+
+python3 servo.py \
+  --ros-args \
+    -p calib_yaml:=$HOME/ws_lidar/src/ros2-lidar-explorer/config/calibrate.yaml \
+    -p pendulum_deg:=$PENDULUM_DEG \
+    -p delta_deg:=$DELTA_DEG > /dev/null 2>&1 &
+echo "[9] Servo Control (pendulum: $PENDULUM_DEG°, delta: $DELTA_DEG°)"
+
+sleep 1
+
+# 10) Nav2 Navigation Stack
 if [ "$USE_3D_MAPPING" = "j" ] || [ "$USE_3D_MAPPING" = "J" ]; then
   NAV2_PARAMS="nav2_params_3d_pi.yaml"
 else
@@ -108,16 +135,16 @@ ros2 launch nav2_bringup navigation_launch.py \
   autostart:=true \
   use_lifecycle_mgr:=true \
   params_file:=$HOME/ws_lidar/src/ros2-lidar-explorer/config/$NAV2_PARAMS > /dev/null 2>&1 &
-echo "[9] Nav2 Navigation"
+echo "[10] Nav2 Navigation"
 
 sleep 2
 
-# 10) Teleop Keyboard (INTERAKTIV - braucht Terminal!)
+# 11) Teleop Keyboard (INTERAKTIV - braucht Terminal!)
 gnome-terminal -- bash -c "\
   echo '=== Keyboard Teleop ==='; \
   ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/cmd_vel_teleop; \
   exec bash" &
-echo "[10] Keyboard Teleop (Terminal)"
+echo "[11] Keyboard Teleop (Terminal)"
 
 sleep 1
 
@@ -126,15 +153,6 @@ sleep 1
 if [ "$USE_3D_MAPPING" = "j" ] || [ "$USE_3D_MAPPING" = "J" ]; then
   echo ""
   echo "🚀 3D-Mapping aktiviert!"
-  
-  # 11) Servo Control
-  python3 servo.py \
-    --ros-args \
-      -p calib_yaml:=$HOME/ws_lidar/src/ros2-lidar-explorer/config/calibrate.yaml \
-      -p pendulum_deg:=15.0 > /dev/null 2>&1 &
-  echo "[11] Servo Control"
-  
-  sleep 2
   
   # 12) Scan to PointCloud Converter
   python3 scan_to_pointcloud.py > /dev/null 2>&1 &
