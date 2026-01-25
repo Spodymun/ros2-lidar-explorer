@@ -40,15 +40,8 @@ USE_3D_MAPPING="${USE_3D_MAPPING:-j}"
 echo "Räume alte Daten auf..."
 rm -f ~/.ros/pose_db.db ~/.ros/slam_toolbox*db ~/.ros/seen_frontiers* ~/.ros/*.yaml ~/.ros/*.pgm
 
-# 1) Robot State Publisher (URDF)
-if [ "$USE_3D_MAPPING" = "j" ] || [ "$USE_3D_MAPPING" = "J" ]; then
-  URDF_FILE="robot.urdf_3d.xacro"
-else
-  URDF_FILE="robot.urdf.xacro"
-fi
-
 ros2 run robot_state_publisher robot_state_publisher \
-  --ros-args -p robot_description:="$(xacro ~/ws_lidar/src/ros2-lidar-explorer/description/$URDF_FILE)" \
+  --ros-args -p robot_description:="$(xacro ~/ws_lidar/src/ros2-lidar-explorer/description/robot.urdf.xacro)" \
   -p use_sim_time:=false > /dev/null 2>&1 &
 echo "[1] Robot State Publisher"
 

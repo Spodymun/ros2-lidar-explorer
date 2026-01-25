@@ -128,11 +128,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        left_mid_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         left_rear_wheel:
           Alpha: 1
           Show Axes: false
@@ -144,11 +139,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         right_front_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        right_mid_wheel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -405,21 +395,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0.19999997317790985
-      Class: rviz_default_plugins/TopDownOrtho
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 4.122920036315918
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: -0.00913854967802763
+        Y: 0.03890889137983322
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 95.04695129394531
+      Pitch: 0.4847964942455292
       Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: 4.971901893615723
-      Y: -2.290344715118408
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 5.4673895835876465
     Saved: ~
 Window Geometry:
   Displays:
