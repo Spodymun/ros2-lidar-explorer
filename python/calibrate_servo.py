@@ -89,7 +89,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Einmaliges Kalibrierungsskript: Mittellage per Hand einstellen und als mid_pos übernehmen."
     )
-    parser.add_argument("--device", default="/dev/ttyACM1", help="Serielle Schnittstelle")
+    parser.add_argument("--device", default="/dev/ttyACM0", help="Serielle Schnittstelle")
     parser.add_argument("--baud", type=int, default=1_000_000, help="Baudrate")
     parser.add_argument("--id", type=int, default=1, help="Servo-ID")
     parser.add_argument("--save-yaml", default="/home/rovi/ws_lidar/src/ros2-lidar-explorer/config/calibrate.yaml", help="Optionaler Pfad zu einer YAML-Datei für ROS2-Parameter")

@@ -47,7 +47,7 @@ class ServoSweepNode(Node):
         super().__init__('servo_sweep_node')
         self.joint_pub = self.create_publisher(JointState, 'joint_states', 10)
 
-        self.declare_parameter("device", "/dev/ttyACM1")
+        self.declare_parameter("device", "/dev/ttyACM0")
         self.declare_parameter("baud", 1_000_000)
         self.declare_parameter("servo_id", 1)
         self.declare_parameter("speed", 175)

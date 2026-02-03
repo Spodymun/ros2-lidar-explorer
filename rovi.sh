@@ -4,20 +4,6 @@
 # Nutzt Arduino für 4-Motor Odometrie (PWM + Encoder)
 # Minimierte Terminal-Ansicht
 
-# Arduino Port überprüfen
-ARDUINO_PORT="${1:-/dev/ttyACM2}"
-if [ ! -e "$ARDUINO_PORT" ]; then
-    ARDUINO_PORT="/dev/ttyUSB0"
-fi
-
-if [ ! -e "$ARDUINO_PORT" ]; then
-    echo "❌ Arduino nicht gefunden!"
-    ls /dev/tty{ACM,USB}* 2>/dev/null
-    exit 1
-fi
-
-echo "✅ Arduino gefunden: $ARDUINO_PORT"
-
 # ROS env
 source /opt/ros/jazzy/setup.bash
 source ~/ws_lidar/install/setup.bash
@@ -49,7 +35,7 @@ sleep 1
 
 # 2) Motor Publisher
 cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 motor_publisher.py $ARDUINO_PORT > /dev/null 2>&1 &
+python3 motor_publisher.py ACM1 > /dev/null 2>&1 &
 echo "[2] Motor Publisher"
 
 sleep 1
@@ -81,8 +67,8 @@ echo "[5] RViz (Terminal)"
 
 sleep 2
 
-# 6) CMD Vel to Motors Controller
-python3 cmd_vel_to_motors.py $ARDUINO_PORT > /dev/null 2>&1 &
+ # 6) CMD Vel to Motors Controller
+python3 cmd_vel_to_motors.py ACM1 > /dev/null 2>&1 &
 echo "[6] CMD Vel to Motors"
 
 sleep 1

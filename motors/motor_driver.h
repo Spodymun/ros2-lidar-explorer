@@ -2,14 +2,7 @@
    Motor driver function definitions - by James Nugen
    *************************************************************/
 
-#ifdef L298_MOTOR_DRIVER
-  #define RIGHT_MOTOR_BACKWARD 5
-  #define LEFT_MOTOR_BACKWARD  6
-  #define RIGHT_MOTOR_FORWARD  9
-  #define LEFT_MOTOR_FORWARD   10
-  #define RIGHT_MOTOR_ENABLE 12
-  #define LEFT_MOTOR_ENABLE 13
-#elif defined MDD10A_MOTOR_DRIVER
+#if defined MDD10A_MOTOR_DRIVER
   // MDD10A Motor Driver Pin Configuration for Arduino Nano Every
   // 4-Motor configuration with 2x MDD10A drivers
   

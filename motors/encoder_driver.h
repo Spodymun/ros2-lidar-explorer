@@ -10,7 +10,7 @@
   #define ENC_MOTOR1_PIN_B 5    // Digital pin 5
   
   // Motor 2 (Left Rear) Encoder
-  #define ENC_MOTOR2_PIN_A 0    // Digital pin 0 (interrupt)
+  #define ENC_MOTOR2_PIN_A 16    // Digital pin 0 (interrupt)
   #define ENC_MOTOR2_PIN_B 14   // Digital pin 14
   
   // Motor 3 (Right Front) Encoder
@@ -18,7 +18,7 @@
   #define ENC_MOTOR3_PIN_B 11   // Digital pin 11
   
   // Motor 4 (Right Rear) Encoder
-  #define ENC_MOTOR4_PIN_A 1    // Digital pin 1 (interrupt)
+  #define ENC_MOTOR4_PIN_A 17    // Digital pin 1 (interrupt)
   #define ENC_MOTOR4_PIN_B 15   // Digital pin 15
 #endif
    

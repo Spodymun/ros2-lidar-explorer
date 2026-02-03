@@ -25,11 +25,11 @@ Full 4-motor configuration with independent encoder tracking
 // Encoder Pins (4 total)
 #define ENC_MOTOR1_PIN_A   2
 #define ENC_MOTOR1_PIN_B   5
-#define ENC_MOTOR2_PIN_A   0
+#define ENC_MOTOR2_PIN_A   16
 #define ENC_MOTOR2_PIN_B   14
 #define ENC_MOTOR3_PIN_A   7
 #define ENC_MOTOR3_PIN_B   11
-#define ENC_MOTOR4_PIN_A   1
+#define ENC_MOTOR4_PIN_A   17
 #define ENC_MOTOR4_PIN_B   15
 
 #define MOTOR1 0
@@ -37,12 +37,12 @@ Full 4-motor configuration with independent encoder tracking
 #define MOTOR3 2
 #define MOTOR4 3
 
-#define READ_ENCODERS  'e'
-#define READ_MOTOR_DATA 'f'
-#define MOTOR_SPEEDS   'm'
-#define MOTOR_RAW_PWM  'o'
-#define RESET_ENCODERS 'r'
-#define GET_BAUDRATE   'b'
+#define READ_ENCODERS     'e'
+#define READ_MOTOR_DATA   'f'
+#define MOTOR_SPEEDS      'm'   // legacy: direct PWM (left,right)
+#define MOTOR_SPEED_TICKS 'v'   // NEW: ticks/frame (left,right)
+#define RESET_ENCODERS    'r'
+#define GET_BAUDRATE      'b'
 
 // ============ GLOBAL VARIABLES ============
 volatile long motor1_enc_pos = 0L;
@@ -54,17 +54,18 @@ const int motor_pwm_pins[4] = {MOTOR1_PWM, MOTOR2_PWM, MOTOR3_PWM, MOTOR4_PWM};
 const int motor_dir_pins[4] = {MOTOR1_DIR, MOTOR2_DIR, MOTOR3_DIR, MOTOR4_DIR};
 
 struct SetPointInfo {
-  int TargetTicksPerFrame;
+  int  TargetTicksPerFrame;
   long Encoder;
   long PrevEnc;
-  int output;
-  int PrevInput;
-  int ITerm;
+  int  output;
+  int  PrevInput;
+  int  ITerm;   // (unused currently)
 };
 
 SetPointInfo motor1PID, motor2PID, motor3PID, motor4PID;
 
-int Kp = 20, Kd = 12, Ki = 0, Ko = 50;
+// NOTE: This is really PD + bias (Ko). Keeping your values, but making "stop" truly stop.
+int Kp = 30, Kd = 15, Ki = 0, Ko = 80;
 
 char cmd, argv1[16], argv2[16];
 long arg1, arg2;
@@ -86,21 +87,43 @@ void setMotorSpeed(int motor_id, int spd) {
     spd = -spd;
     reverse = 1;
   }
-  if (spd > 255) spd = 255;
+  if (spd > MAX_PWM) spd = MAX_PWM;
   digitalWrite(motor_dir_pins[motor_id], reverse);
   analogWrite(motor_pwm_pins[motor_id], spd);
 }
 
+void stopAllMotors() {
+  setMotorSpeed(MOTOR1, 0);
+  setMotorSpeed(MOTOR2, 0);
+  setMotorSpeed(MOTOR3, 0);
+  setMotorSpeed(MOTOR4, 0);
+}
+
 // ============ PID CONTROL ============
 void doPID(SetPointInfo * p) {
-  long Perror, Derror, output;
-  int input = p->Encoder - p->PrevEnc;
+  // ticks during last frame
+  int input = (int)(p->Encoder - p->PrevEnc);
   p->PrevEnc = p->Encoder;
-  Perror = p->TargetTicksPerFrame - input;
-  Derror = Kd * (Perror - p->PrevInput);
-  output = Ko + Kp * Perror + Derror;
-  p->PrevInput = Perror;
-  p->output = output;
+
+  // Hard stop if target is zero (prevents Ko bias from moving robot)
+  if (p->TargetTicksPerFrame == 0) {
+    p->output = 0;
+    p->PrevInput = 0;
+    return;
+  }
+
+  long Perror = (long)p->TargetTicksPerFrame - (long)input;
+  long Derror = (long)Kd * (Perror - (long)p->PrevInput);
+
+  long output = (long)Ko + (long)Kp * Perror + Derror;
+
+  p->PrevInput = (int)Perror;
+
+  // clamp to [-MAX_PWM, MAX_PWM]
+  if (output > MAX_PWM) output = MAX_PWM;
+  if (output < -MAX_PWM) output = -MAX_PWM;
+
+  p->output = (int)output;
 }
 
 void resetPID() {
@@ -108,6 +131,9 @@ void resetPID() {
   motor2PID.TargetTicksPerFrame = motor2PID.output = 0;
   motor3PID.TargetTicksPerFrame = motor3PID.output = 0;
   motor4PID.TargetTicksPerFrame = motor4PID.output = 0;
+
+  motor1PID.PrevEnc = motor2PID.PrevEnc = motor3PID.PrevEnc = motor4PID.PrevEnc = 0;
+  motor1PID.PrevInput = motor2PID.PrevInput = motor3PID.PrevInput = motor4PID.PrevInput = 0;
 }
 
 void updatePID() {
@@ -115,16 +141,23 @@ void updatePID() {
   motor2PID.Encoder = readEncoder(MOTOR2);
   motor3PID.Encoder = readEncoder(MOTOR3);
   motor4PID.Encoder = readEncoder(MOTOR4);
-  
+
   doPID(&motor1PID);
   doPID(&motor2PID);
   doPID(&motor3PID);
   doPID(&motor4PID);
-  
+
   setMotorSpeed(MOTOR1, motor1PID.output);
   setMotorSpeed(MOTOR2, motor2PID.output);
   setMotorSpeed(MOTOR3, motor3PID.output);
   setMotorSpeed(MOTOR4, motor4PID.output);
+}
+
+bool anyTargetNonZero() {
+  return (motor1PID.TargetTicksPerFrame != 0 ||
+          motor2PID.TargetTicksPerFrame != 0 ||
+          motor3PID.TargetTicksPerFrame != 0 ||
+          motor4PID.TargetTicksPerFrame != 0);
 }
 
 // ============ ENCODER HANDLING ============
@@ -142,7 +175,7 @@ void initEncoders() {
   pinMode(ENC_MOTOR3_PIN_B, INPUT_PULLUP);
   pinMode(ENC_MOTOR4_PIN_A, INPUT_PULLUP);
   pinMode(ENC_MOTOR4_PIN_B, INPUT_PULLUP);
-  
+
   attachInterrupt(digitalPinToInterrupt(ENC_MOTOR1_PIN_A), motor1EncoderEvent, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_MOTOR2_PIN_A), motor2EncoderEvent, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_MOTOR3_PIN_A), motor3EncoderEvent, CHANGE);
@@ -165,29 +198,27 @@ void setup() {
   Serial.begin(BAUDRATE);
   initEncoders();
   initMotorController();
+  resetEncoders();
   resetPID();
+  stopAllMotors();
 }
 
 void loop() {
+  // -------- Serial command parser --------
   while (Serial.available() > 0) {
     char chr = Serial.read();
-    
+
     if (chr == '\r' || chr == '\n') {
-      // End of command
-      // Parse arg2 only if we have it
-      if (parsing_state >= 2) {
-        arg2 = atoi(argv2);
+      // end of command
+      if (parsing_state >= 2) arg2 = atoi(argv2);
+
+      if (cmd == GET_BAUDRATE) {
+        Serial.println(BAUDRATE);
       }
-      
-      // Execute command regardless of argument count
-      if (cmd == GET_BAUDRATE) Serial.println(BAUDRATE);
       else if (cmd == READ_ENCODERS) {
-        Serial.print(readEncoder(MOTOR1));
-        Serial.print(" ");
-        Serial.print(readEncoder(MOTOR2));
-        Serial.print(" ");
-        Serial.print(readEncoder(MOTOR3));
-        Serial.print(" ");
+        Serial.print(readEncoder(MOTOR1)); Serial.print(" ");
+        Serial.print(readEncoder(MOTOR2)); Serial.print(" ");
+        Serial.print(readEncoder(MOTOR3)); Serial.print(" ");
         Serial.println(readEncoder(MOTOR4));
       }
       else if (cmd == READ_MOTOR_DATA) {
@@ -203,17 +234,31 @@ void loop() {
       else if (cmd == RESET_ENCODERS) {
         resetEncoders();
         resetPID();
+        stopAllMotors();
         Serial.println("OK");
       }
       else if (cmd == MOTOR_SPEEDS) {
-        // Direct PWM control: arg1 = left speed, arg2 = right speed
-        setMotorSpeed(MOTOR1, arg1);
-        setMotorSpeed(MOTOR2, arg1);
-        setMotorSpeed(MOTOR3, arg2);
-        setMotorSpeed(MOTOR4, arg2);
+        // legacy direct PWM: arg1 = left PWM, arg2 = right PWM
+        setMotorSpeed(MOTOR1, (int)arg1);
+        setMotorSpeed(MOTOR2, (int)arg1);
+        setMotorSpeed(MOTOR3, (int)arg2);
+        setMotorSpeed(MOTOR4, (int)arg2);
         Serial.println("OK");
       }
-      // Reset for next command
+      else if (cmd == MOTOR_SPEED_TICKS) {
+        // NEW: closed-loop speed targets in ticks/frame
+        motor1PID.TargetTicksPerFrame = (int)arg1;
+        motor2PID.TargetTicksPerFrame = (int)arg1;
+        motor3PID.TargetTicksPerFrame = (int)arg2;
+        motor4PID.TargetTicksPerFrame = (int)arg2;
+
+        Serial.print("GOT_V targets L=");
+        Serial.print(motor1PID.TargetTicksPerFrame);
+        Serial.print(" R=");
+        Serial.println(motor3PID.TargetTicksPerFrame);
+      }
+
+      // reset parser state
       parsing_state = 0;
       cmd = 0;
       arg1 = 0;
@@ -222,43 +267,39 @@ void loop() {
       memset(argv2, 0, 16);
     }
     else if (chr == ' ') {
-      // Delimiter between command/args
       if (parsing_state == 0) {
-        // Command received, switch to arg1
         parsing_state = 1;
         arg1 = 0;
       } else if (parsing_state == 1) {
-        // arg1 received, switch to arg2
         arg1 = atoi(argv1);
         parsing_state = 2;
         memset(argv1, 0, 16);
       }
-      // ignore spaces in other states
     }
     else if (parsing_state == 0) {
-      // Reading command (single char)
       cmd = chr;
     }
     else if (parsing_state == 1) {
-      // Reading arg1
       size_t len = strlen(argv1);
       if (len < 15) argv1[len] = chr;
     }
     else if (parsing_state == 2) {
-      // Reading arg2
       size_t len = strlen(argv2);
       if (len < 15) argv2[len] = chr;
     }
   }
-  
-  if (millis() % (1000/30) == 0) {
-    if (motor1PID.TargetTicksPerFrame != 0 || motor2PID.TargetTicksPerFrame != 0 ||
-        motor3PID.TargetTicksPerFrame != 0 || motor4PID.TargetTicksPerFrame != 0) {
-      motor1PID.Encoder = readEncoder(MOTOR1);
-      motor2PID.Encoder = readEncoder(MOTOR2);
-      motor3PID.Encoder = readEncoder(MOTOR3);
-      motor4PID.Encoder = readEncoder(MOTOR4);
+
+  // -------- Stable 30Hz PID update --------
+  static unsigned long lastPID = 0;
+  unsigned long now = millis();
+
+  if (now - lastPID >= 33) {  // ~30Hz
+    lastPID = now;
+
+    if (anyTargetNonZero()) {
       updatePID();
+    } else {
+      stopAllMotors();
     }
   }
 }
