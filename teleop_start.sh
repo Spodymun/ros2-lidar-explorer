@@ -10,13 +10,13 @@ source ~/ws_lidar/install/setup.bash
 
 # 2) Motor Publisher
 cd ~/ws_lidar/src/ros2-lidar-explorer/python
-python3 motor_publisher.py ACM1 > /dev/null 2>&1 &
+python3 motor_publisher.py > /dev/null 2>&1 &
 echo "[2] Motor Publisher"
 
 sleep 1
 
  # 6) CMD Vel to Motors Controller
-python3 cmd_vel_to_motors.py ACM1 > /dev/null 2>&1 &
+python3 cmd_vel_to_motors.py > /dev/null 2>&1 &
 echo "[6] CMD Vel to Motors"
 
 sleep 1

@@ -17,7 +17,7 @@ class MotorPublisher(Node):
         super().__init__('motor_publisher')
 
         # Serielle Verbindung
-        self.declare_parameter('serial_port', '/dev/ttyACM1')
+        self.declare_parameter('serial_port', '/dev/ttyACM0')
         self.declare_parameter('baud_rate', 57600)
 
         if serial_port:
